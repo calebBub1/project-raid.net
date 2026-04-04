@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Project: Raid 3D</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#000;overflow:hidden;font-family:'Courier New',monospace;}
+  #c{display:block;width:100vw;height:100vh;}
+  #hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;
+    align-items:flex-start;padding:8px 12px;pointer-events:none;z-index:10;gap:6px;}
+  .hp{background:rgba(0,0,0,0.75);border:2px solid #555;padding:6px 10px;font-size:10px;
+    color:#fff;line-height:2;min-width:130px;}
+  .hp span{color:#adf;}
+  #overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;z-index:20;gap:14px;overflow-y:auto;padding:20px;}
+  #overlay h1{font-size:clamp(16px,3.5vw,28px);color:#5aff5a;
+    text-shadow:0 0 16px rgba(90,255,90,0.5);letter-spacing:3px;text-align:center;}
+  #overlay p{font-size:clamp(8px,1.3vw,11px);color:#aaa;text-align:center;line-height:2.2;max-width:480px;}
+  #overlay button{font-family:'Courier New',monospace;font-size:12px;background:#2a6a2a;color:#5aff5a;
+    border:2px solid #5aff5a;padding:10px 24px;cursor:pointer;letter-spacing:2px;transition:.1s;}
+  #overlay button:hover{background:#5aff5a;color:#000;}
+  #wave-banner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    background:rgba(160,0,0,0.9);color:#fff;font-size:clamp(11px,2vw,18px);
+    padding:12px 28px;border:2px solid #ff4444;z-index:15;pointer-events:none;
+    display:none;text-align:center;font-family:'Courier New',monospace;letter-spacing:3px;}
+  #crosshair{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:18px;height:18px;pointer-events:none;z-index:5;}
+  #crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(255,255,255,0.7);}
+  #crosshair::before{left:50%;top:0;width:1.5px;height:100%;transform:translateX(-50%);}
+  #crosshair::after{top:50%;left:0;height:1.5px;width:100%;transform:translateY(-50%);}
+  #dmg-flash{position:fixed;inset:0;pointer-events:none;z-index:4;background:rgba(255,0,0,0);transition:background .1s;}
+  #blind-overlay{position:fixed;inset:0;pointer-events:none;z-index:6;background:rgba(0,0,0,0);transition:background 1s;}
+  #invis-overlay{position:fixed;inset:0;pointer-events:none;z-index:3;
+    background:rgba(80,140,255,0.07);border:3px solid rgba(80,140,255,0.18);display:none;}
+  #hint{position:fixed;bottom:8px;right:12px;font-size:8px;color:rgba(255,255,255,0.25);
+    pointer-events:none;z-index:10;text-align:right;line-height:2;}
+  #kill-feed{position:fixed;bottom:30px;left:12px;font-size:9px;color:#ffd700;
+    pointer-events:none;z-index:10;line-height:2;max-width:320px;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud">
+  <div class="hp">
+    <div id="hearts">♥♥♥♥♥♥♥♥♥♥</div>
+    <div>🗡️ EMERALD SWORD</div>
+    <div id="invis-txt">👻 <span>INVISIBLE</span></div>
+    <div id="blind-txt" style="color:#888;display:none;">🙈 BLINDED</div>
+  </div>
+  <div class="hp" style="text-align:center;flex:1;">
+    <div id="wave-lbl">WAVE 1 / 7</div>
+    <div>💎 <span id="em-lbl">0</span></div>
+    <div id="phase-lbl" style="color:#7af;">PREP: 10s</div>
+    <div id="enemy-lbl" style="color:#f99;font-size:8px;"></div>
+  </div>
+  <div class="hp" style="text-align:right;">
+    <div>🏠 <span id="vil-lbl">●●●●●</span> <span id="baby-lbl" style="color:#ffd;font-size:9px;">◦◦◦</span></div>
+    <div>✦ <span id="allay-lbl">ALLAYS: 3</span></div>
+    <div>🤖 <span id="golem-lbl">GOLEM ●●●●●</span></div>
+    <div id="king-lbl" style="color:#ffd700;display:none;">👑 KING: <span id="king-hp">200</span>hp</div>
+  </div>
+</div>
+
+<div id="wave-banner"></div>
+<div id="crosshair"></div>
+<div id="dmg-flash"></div>
+<div id="blind-overlay"></div>
+<div id="invis-overlay"></div>
+<div id="kill-feed"></div>
+<div id="hint">WASD=MOVE · MOUSE=LOOK · CLICK/SPACE=ATTACK<br>(click game to lock pointer)</div>
+
+<div id="overlay">
+  <h1>⚔️ PROJECT: RAID 3D ⚔️</h1>
+  <p>
+    Defend the village across 7 brutal waves!<br><br>
+    👻 Invisibility breaks on attack for 2s<br>
+    ✦ Allays orbit &amp; attack · repel Vexes<br>
+    🤖 Iron Golem tanks, targets Evokers<br>
+    🧊 Sliver Cube absorbs 5 Vexes then EXPLODES<br>
+    💀 Wisp kills Vexes instantly — 10x stronger<br>
+    👁️ Illusioner blinds you for 60s<br>
+    👑 Arch-Illager is the Wave 7 final boss<br>
+    🧓 King Villager (age 215) summons Evokers<br><br>
+    WASD · Mouse Look · Click/Space = Attack
+  </p>
+  <button onclick="startGame()">▶ BEGIN RAID</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const TEX_URLS={
+  villager:      'https://files.catbox.moe/bo4gde.png',
+  babyVillager:  'https://files.catbox.moe/5dhp4f.png',
+  pillager:      'https://files.catbox.moe/zbzp05.png',
+  evoker:        'https://files.catbox.moe/kilyj5.png',
+  vindicator:    'https://files.catbox.moe/rwz3fr.png',
+  golem:         'https://files.catbox.moe/zybo6j.png',
+  allay:         'https://files.catbox.moe/3jmr9i.gif',
+  ravager:       'https://files.catbox.moe/6uwo93.png',
+  silverCube:    'https://files.catbox.moe/h14oot.png',
+  vex:           'https://files.catbox.moe/tjf1hc.gif',
+  evokerVillager:'https://files.catbox.moe/btuqk9.webp',
+  wisp:          'https://files.catbox.moe/vjco8w.png',
+  illusioner:    'https://files.catbox.moe/cxjotx.png',
+  archIllager:   'https://files.catbox.moe/rt3rtv.gif',
+  kingVillager:  'https://files.catbox.moe/pxo6gp.png',
+};
+const TL=new THREE.TextureLoader();
+TL.crossOrigin='anonymous';
+const TX={};
+Object.entries(TEX_URLS).forEach(([k,v])=>{
+  TX[k]=TL.load(v);
+  TX[k].magFilter=THREE.NearestFilter;
+  TX[k].minFilter=THREE.NearestFilter;
+});
+
+// SCENE
+const renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:false});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+renderer.setSize(window.innerWidth,window.innerHeight);
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x7ab8f5);
+scene.fog=new THREE.Fog(0x7ab8f5,35,130);
+const camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,200);
+camera.position.set(0,1.7,0);
+window.addEventListener('resize',()=>{
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+// LIGHTING
+const sun=new THREE.DirectionalLight(0xfff8e0,1.3);
+sun.position.set(20,40,20);sun.castShadow=true;
+sun.shadow.camera.left=-55;sun.shadow.camera.right=55;
+sun.shadow.camera.top=55;sun.shadow.camera.bottom=-55;
+sun.shadow.camera.far=120;sun.shadow.mapSize.set(1024,1024);
+scene.add(sun,new THREE.AmbientLight(0x8ab4f0,0.75));
+
+// MAP
+const BUILDINGS=[];let mapBuilt=false;
+function buildMap(){
+  if(mapBuilt)return;mapBuilt=true;
+  const g=new THREE.Mesh(new THREE.PlaneGeometry(90,90),new THREE.MeshLambertMaterial({color:0x4a7a3a}));
+  g.rotation.x=-Math.PI/2;g.receiveShadow=true;scene.add(g);
+  const pm=new THREE.MeshLambertMaterial({color:0xb8a070});
+  [[90,4],[4,90]].forEach(([w,d])=>{const p=new THREE.Mesh(new THREE.BoxGeometry(w,0.02,d),pm);p.position.y=0.01;p.receiveShadow=true;scene.add(p);});
+  const well=new THREE.Mesh(new THREE.CylinderGeometry(1.2,1.2,1.2,12),new THREE.MeshLambertMaterial({color:0x606060}));
+  well.position.y=0.6;well.castShadow=true;scene.add(well);
+  const wat=new THREE.Mesh(new THREE.CylinderGeometry(0.9,0.9,0.1,12),new THREE.MeshLambertMaterial({color:0x2080ff}));
+  wat.position.y=1.22;scene.add(wat);
+  const bpos=[[-14,-14],[14,-14],[-14,14],[14,14],[-4,-14],[4,14],[-14,0],[14,0]];
+  bpos.forEach(([x,z])=>{
+    const w=new THREE.Mesh(new THREE.BoxGeometry(5,3.5,4.5),new THREE.MeshLambertMaterial({color:0x8b6040}));
+    w.position.set(x,1.75,z);w.castShadow=true;w.receiveShadow=true;scene.add(w);
+    const r=new THREE.Mesh(new THREE.ConeGeometry(4,2,4),new THREE.MeshLambertMaterial({color:0x5a3020}));
+    r.position.set(x,4.5,z);r.rotation.y=Math.PI/4;r.castShadow=true;scene.add(r);
+    BUILDINGS.push({x,z,hw:2.5,hd:2.25});
+  });
+  for(let i=-20;i<=20;i+=3){
+    [-20,20].forEach(z=>{const m=new THREE.Mesh(new THREE.BoxGeometry(0.3,1.2,0.3),new THREE.MeshLambertMaterial({color:0xc8a060}));m.position.set(i,0.6,z);scene.add(m);});
+    [-20,20].forEach(x=>{const m=new THREE.Mesh(new THREE.BoxGeometry(0.3,1.2,0.3),new THREE.MeshLambertMaterial({color:0xc8a060}));m.position.set(x,0.6,i);scene.add(m);});
+  }
+}
+
+// HELPERS
+function makeSprite(key,h,w){
+  const mat=new THREE.SpriteMaterial({map:TX[key],transparent:true,alphaTest:0.05});
+  const s=new THREE.Sprite(mat);s.scale.set(w||h*0.8,h,1);return s;
+}
+function makeBar(max,w=1.4){
+  const g=new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.PlaneGeometry(w,0.13),new THREE.MeshBasicMaterial({color:0x111111})));
+  const fg=new THREE.Mesh(new THREE.PlaneGeometry(w,0.13),new THREE.MeshBasicMaterial({color:0x44ff44}));
+  fg.position.z=0.01;g.add(fg);g._fg=fg;g._w=w;g._max=max;return g;
+}
+function setBar(bar,hp){
+  const p=Math.max(0,hp/bar._max);bar._fg.scale.x=p;bar._fg.position.x=bar._w*(p-1)/2;
+  bar._fg.material.color.setHex(p>0.5?0x44ff44:p>0.25?0xffaa00:0xff2222);
+}
+function makeEnt(key,h,hpMax,bw){
+  const g=new THREE.Group();
+  const s=makeSprite(key,h);s.position.y=h/2;g.add(s);
+  const bar=makeBar(hpMax,bw||1.4);bar.position.y=h+0.28;g.add(bar);
+  g._bar=bar;g._sprite=s;return g;
+}
+function fc(grp,x,z){grp.rotation.y=Math.atan2(camera.position.x-x,camera.position.z-z);}
+function d2(ax,az,bx,bz){return Math.hypot(ax-bx,az-bz);}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+// PARTICLES
+const PARTS=[];
+function spawnParts(pos,col,n=8){
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2,spd=2+Math.random()*5;
+    const m=new THREE.Mesh(new THREE.SphereGeometry(0.07,4,4),new THREE.MeshBasicMaterial({color:col,transparent:true}));
+    m.position.copy(pos);scene.add(m);
+    PARTS.push({m,vx:Math.cos(a)*spd,vy:2+Math.random()*3,vz:Math.sin(a)*spd,life:0.5+Math.random()*0.4});
+  }
+}
+function tickParts(dt){
+  for(let i=PARTS.length-1;i>=0;i--){
+    const p=PARTS[i];p.life-=dt;p.vy-=9*dt;
+    p.m.position.x+=p.vx*dt;p.m.position.y+=p.vy*dt;p.m.position.z+=p.vz*dt;
+    p.m.material.opacity=Math.max(0,p.life*2);
+    if(p.life<=0){scene.remove(p.m);PARTS.splice(i,1);}
+  }
+}
+
+// DROPS
+const DROPS=[];
+function spawnDrop(pos,val){
+  const m=new THREE.Mesh(new THREE.OctahedronGeometry(0.22),new THREE.MeshLambertMaterial({color:0x00ff80,emissive:0x004420}));
+  m.position.set(pos.x,0.25,pos.z);scene.add(m);DROPS.push({m,val,life:15,t:Math.random()*Math.PI*2});
+}
+function tickDrops(dt){
+  for(let i=DROPS.length-1;i>=0;i--){
+    const d=DROPS[i];d.life-=dt;d.t+=dt*2;d.m.rotation.y=d.t;d.m.position.y=0.25+Math.sin(d.t)*0.1;
+    if(d.life<=0){scene.remove(d.m);DROPS.splice(i,1);}
+  }
+}
+
+// PROJECTILES
+const PROJS=[];
+function spawnProj(pos,dir,dmg,col=0xdddddd,spd=18){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(0.12,6,6),new THREE.MeshBasicMaterial({color:col}));
+  m.position.copy(pos);scene.add(m);PROJS.push({m,dir:dir.clone().normalize(),spd,dmg,life:3.5});
+}
+function tickProjs(dt,gs){
+  for(let i=PROJS.length-1;i>=0;i--){
+    const pr=PROJS[i];pr.life-=dt;pr.m.position.addScaledVector(pr.dir,pr.spd*dt);
+    const pp=pr.m.position;
+    if(d2(pp.x,pp.z,gs.player.x,gs.player.z)<0.7&&!gs.player.blind){
+      gs.player.hp-=pr.dmg;pr.life=0;flashDmg();spawnParts(pp,0xff2222,5);
+    }
+    if(pr.life<=0){scene.remove(pr.m);PROJS.splice(i,1);}
+  }
+}
+
+// FANGS
+const FANGS=[];
+function spawnFangs(from,toward,col=0xff40ff){
+  const dx=toward.x-from.x,dz=toward.z-from.z,len=Math.hypot(dx,dz)||1;
+  for(let f=0;f<6;f++){
+    const m=new THREE.Mesh(new THREE.ConeGeometry(0.25,0.8,4),new THREE.MeshBasicMaterial({color:col,transparent:true}));
+    m.position.set(from.x+dx/len*(2+f*1.8),0.4,from.z+dz/len*(2+f*1.8));
+    scene.add(m);FANGS.push({m,life:1.2,dmg:6});
+  }
+}
+function tickFangs(dt,gs){
+  for(let i=FANGS.length-1;i>=0;i--){
+    const f=FANGS[i];f.life-=dt;f.m.material.opacity=Math.min(1,f.life/0.4);
+    if(d2(f.m.position.x,f.m.position.z,gs.player.x,gs.player.z)<0.8&&f.life>0.6){gs.player.hp-=f.dmg*dt*1.5;flashDmg();}
+    if(f.life<=0){scene.remove(f.m);FANGS.splice(i,1);}
+  }
+}
+
+// KILL FEED
+const KILLS=[];
+function addKill(msg){
+  KILLS.push({msg,life:4});
+  document.getElementById('kill-feed').innerHTML=KILLS.map(k=>k.msg).slice(-5).join('<br>');
+}
+function tickKills(dt){
+  for(let i=KILLS.length-1;i>=0;i--){KILLS[i].life-=dt;if(KILLS[i].life<=0)KILLS.splice(i,1);}
+  document.getElementById('kill-feed').innerHTML=KILLS.map(k=>k.msg).slice(-5).join('<br>');
+}
+
+// WAVE DEFINITIONS
+const WAVE_DEFS=[
+  [{t:'pillager',n:4}],
+  [{t:'pillager',n:5},{t:'vindicator',n:2}],
+  [{t:'pillager',n:5},{t:'vindicator',n:3},{t:'evoker',n:1},{t:'silverCube',n:1}],
+  [{t:'pillager',n:6},{t:'vindicator',n:4},{t:'evoker',n:2},{t:'illusioner',n:1}],
+  [{t:'pillager',n:6},{t:'vindicator',n:4},{t:'evoker',n:2},{t:'ravager',n:1},{t:'evokerVillager',n:1}],
+  [{t:'pillager',n:7},{t:'vindicator',n:5},{t:'evoker',n:2},{t:'illusioner',n:2},{t:'ravager',n:2}],
+  [{t:'pillager',n:4},{t:'vindicator',n:3},{t:'evoker',n:2},{t:'illusioner',n:1},{t:'archIllager',n:1}],
+];
+
+function ESTAT(t){
+  const S={
+    pillager:    {hp:10, spd:3.5,r:0.6, dmg:4, range:14,bw:1.3,h:2.2},
+    vindicator:  {hp:24, spd:4.5,r:0.65,dmg:9, range:1.2,bw:1.5,h:2.6},
+    evoker:      {hp:12, spd:2.5,r:0.65,dmg:0, range:18, bw:1.4,h:2.4},
+    ravager:     {hp:100,spd:3.0,r:1.4, dmg:18,range:1.8,bw:2.2,h:3.2},
+    silverCube:  {hp:40, spd:1.5,r:1.0, dmg:0, range:0,  bw:1.8,h:2.0},
+    vex:         {hp:8,  spd:6.0,r:0.4, dmg:5, range:1.0,bw:0.9,h:1.4},
+    evokerVillager:{hp:30,spd:2.0,r:0.7,dmg:0,range:0,   bw:1.6,h:2.3},
+    wisp:        {hp:30, spd:8.0,r:0.4, dmg:12,range:1.0,bw:1.0,h:1.4},
+    illusioner:  {hp:20, spd:3.0,r:0.65,dmg:5,range:18,  bw:1.5,h:2.4},
+    archIllager: {hp:500,spd:2.8,r:1.2, dmg:15,range:0,  bw:3.0,h:3.8},
+  };
+  return S[t]||{hp:10,spd:3,r:0.6,dmg:5,range:8,bw:1.4,h:2.0};
+}
+
+// GAME STATE
+let GS=null,yaw=0,pitch=0,mouseAtk=false,animId=null;
+const KEYS={};
+
+function freshGS(){
+  return {phase:'prep',wave:1,maxWaves:7,prepTimer:10,emeralds:0,
+    player:{x:0,z:0,hp:20,maxHp:20,invis:true,invisTimer:0,attackCooldown:0,speed:7,blind:false,blindTimer:0},
+    allays:[],golem:null,kingVillager:null,
+    villagers:[],babyVillagers:[],enemies:[],lastTime:0};
+}
+
+// SPAWN FRIENDLIES
+function spawnVillagers(gs){
+  for(let i=0;i<5;i++){
+    const ang=i/5*Math.PI*2,r=6+Math.random()*2;
+    const grp=makeEnt('villager',2.1,10,1.2);
+    const ex=Math.cos(ang)*r,ez=Math.sin(ang)*r;
+    grp.position.set(ex,0,ez);scene.add(grp);
+    gs.villagers.push({grp,x:ex,z:ez,hp:10,maxHp:10,r:0.5,wander:Math.random()*Math.PI*2,wanderT:2+Math.random()*2,dead:false});
+  }
+}
+function spawnBabyVillagers(gs){
+  for(let i=0;i<3;i++){
+    const ang=i/3*Math.PI*2+0.5,r=3+Math.random()*2;
+    const grp=makeEnt('babyVillager',1.2,6,0.9);
+    const ex=Math.cos(ang)*r,ez=Math.sin(ang)*r;
+    grp.position.set(ex,0,ez);scene.add(grp);
+    gs.babyVillagers.push({grp,x:ex,z:ez,hp:6,maxHp:6,r:0.35,
+      wander:Math.random()*Math.PI*2,wanderT:0.8+Math.random()*1,panicTimer:0,panicDir:0,bobT:Math.random()*Math.PI*2,dead:false});
+  }
+}
+function spawnAllays(gs){
+  for(let i=0;i<3;i++){
+    const grp=new THREE.Group();
+    const s=makeSprite('allay',1.4,1.1);s.position.y=0.7;grp.add(s);
+    const glow=new THREE.Mesh(new THREE.SphereGeometry(0.55,8,8),new THREE.MeshBasicMaterial({color:0x80b0ff,transparent:true,opacity:0.2}));
+    glow.position.y=0.7;grp.add(glow);
+    grp.position.set(Math.cos(i/3*Math.PI*2)*3,0,Math.sin(i/3*Math.PI*2)*3);scene.add(grp);
+    gs.allays.push({grp,x:grp.position.x,z:grp.position.z,hp:10,maxHp:10,r:0.4,phase:'orbit',
+      orbitAng:i/3*Math.PI*2,orbitR:3.5+i*0.8,orbitSpd:1.6+i*0.3,
+      attackCooldown:0,dartTarget:null,dartVx:0,dartVz:0,dartTimer:0,respawnTimer:-1,dead:false});
+  }
+}
+function spawnGolem(gs){
+  const grp=makeEnt('golem',3.5,100,2.4);grp.position.set(-5,0,-3);scene.add(grp);
+  gs.golem={grp,x:-5,z:-3,hp:100,maxHp:100,spd:2.2,r:1.1,attackCooldown:0,dead:false};
+}
+function spawnKingVillager(gs){
+  const grp=makeEnt('kingVillager',2.6,200,2.0);grp.position.set(3,0,3);scene.add(grp);
+  gs.kingVillager={grp,x:3,z:3,hp:200,maxHp:200,r:0.7,summonCooldown:14,dead:false};
+  document.getElementById('king-lbl').style.display='block';
+  addKill('👑 King Villager the I (age 215) appears!');
+}
+
+// SPAWN ENEMY
+function edgePos(){
+  const e=[()=>({x:(Math.random()-0.5)*42,z:-27}),()=>({x:(Math.random()-0.5)*42,z:27}),
+           ()=>({x:-27,z:(Math.random()-0.5)*42}),()=>({x:27,z:(Math.random()-0.5)*42})];
+  return e[Math.floor(Math.random()*4)]();
+}
+function spawnEnemy(gs,t,x,z){
+  const st=ESTAT(t);
+  const grp=makeEnt(t,st.h,st.hp,st.bw);grp.position.set(x,0,z);scene.add(grp);
+  gs.enemies.push({grp,x,z,type:t,...st,
+    attackCooldown:Math.random()*1.5,
+    spellCooldown:t==='evoker'?4+Math.random()*2:0,
+    summonCooldown:(t==='evokerVillager'||t==='archIllager')?8:0,
+    blindCooldown:t==='illusioner'?15+Math.random()*5:0,
+    wispCooldown:t==='evokerVillager'?5:0,
+    absorbedVexes:t==='silverCube'?0:undefined,
+    dead:false});
+}
+function spawnWave(gs){
+  const def=WAVE_DEFS[Math.min(gs.wave-1,WAVE_DEFS.length-1)];
+  def.forEach(({t,n})=>{for(let i=0;i<n;i++){const p=edgePos();spawnEnemy(gs,t,p.x,p.z);}});
+  if(gs.wave>=5&&!gs.kingVillager)spawnKingVillager(gs);
+}
+
+// MAIN TICK
+function tick(dt){
+  const gs=GS;
+  if(gs.phase==='prep'){
+    gs.prepTimer-=dt;if(gs.prepTimer<=0){gs.phase='wave';spawnWave(gs);showBanner(gs);}
+  } else if(gs.phase==='wave'){
+    tickEnemies(dt,gs);
+    if(gs.enemies.filter(e=>!e.dead).length===0){
+      if(gs.wave>=gs.maxWaves){gs.phase='win';showEnd(true,gs);return;}
+      gs.wave++;gs.phase='prep';gs.prepTimer=10;
+    }
+  }
+  tickPlayer(dt,gs);tickAllays(dt,gs);tickGolem(dt,gs);
+  tickKing(dt,gs);tickVillagers(dt,gs);tickBabies(dt,gs);
+  tickProjs(dt,gs);tickFangs(dt,gs);tickDrops(dt);tickParts(dt);tickKills(dt);
+  // player collects drops
+  for(let i=DROPS.length-1;i>=0;i--){
+    const d=DROPS[i];if(d2(d.m.position.x,d.m.position.z,gs.player.x,gs.player.z)<1.3){
+      gs.emeralds+=d.val;scene.remove(d.m);DROPS.splice(i,1);spawnParts(d.m.position,0x00ff80,4);
+    }
+  }
+  tickHUD(gs);
+  if(gs.player.hp<=0&&gs.phase!=='gameover'&&gs.phase!=='win'){gs.phase='gameover';showEnd(false,gs);}
+  const liveV=gs.villagers.filter(v=>!v.dead).length+gs.babyVillagers.filter(b=>!b.dead).length;
+  if(liveV===0&&gs.phase==='wave'){gs.phase='gameover';showEnd(false,gs);}
+}
+
+// PLAYER
+function tickPlayer(dt,gs){
+  const p=gs.player;
+  const fwd=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+  const rgt=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+  let mx=0,mz=0;
+  if(KEYS['w']||KEYS['W']||KEYS['ArrowUp']){mx+=fwd.x;mz+=fwd.z;}
+  if(KEYS['s']||KEYS['S']||KEYS['ArrowDown']){mx-=fwd.x;mz-=fwd.z;}
+  if(KEYS['a']||KEYS['A']||KEYS['ArrowLeft']){mx-=rgt.x;mz-=rgt.z;}
+  if(KEYS['d']||KEYS['D']||KEYS['ArrowRight']){mx+=rgt.x;mz+=rgt.z;}
+  const mag=Math.hypot(mx,mz)||1;
+  if(mx||mz){p.x+=mx/mag*p.speed*dt;p.z+=mz/mag*p.speed*dt;}
+  p.x=clamp(p.x,-19,19);p.z=clamp(p.z,-19,19);
+  BUILDINGS.forEach(b=>{
+    const ox=p.x-b.x,oz=p.z-b.z;
+    if(Math.abs(ox)<b.hw+0.5&&Math.abs(oz)<b.hd+0.5){
+      Math.abs(ox)>Math.abs(oz)?p.x=b.x+(b.hw+0.5)*Math.sign(ox):p.z=b.z+(b.hd+0.5)*Math.sign(oz);
+    }
+  });
+  camera.position.set(p.x,1.7,p.z);camera.rotation.order='YXZ';camera.rotation.y=yaw;camera.rotation.x=pitch;
+  if(p.invisTimer>0){p.invisTimer-=dt;if(p.invisTimer<=0)p.invis=true;}
+  document.getElementById('invis-overlay').style.display=p.invis?'block':'none';
+  if(p.blind){
+    p.blindTimer-=dt;
+    if(p.blindTimer<=0){p.blind=false;document.getElementById('blind-overlay').style.background='rgba(0,0,0,0)';document.getElementById('blind-txt').style.display='none';}
+  }
+  p.attackCooldown-=dt;
+  const wantAtk=KEYS[' ']||KEYS['Enter']||mouseAtk;mouseAtk=false;
+  if(wantAtk&&p.attackCooldown<=0){
+    p.attackCooldown=0.6;p.invis=false;p.invisTimer=2;
+    const ad=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+    gs.enemies.forEach(e=>{
+      if(e.dead)return;
+      const dx=e.x-p.x,dz=e.z-p.z,dd=d2(e.x,e.z,p.x,p.z);
+      if(dd<3.8&&(dx/dd)*ad.x+(dz/dd)*ad.z>0.25)hurtEnemy(gs,e,7);
+    });
+    spawnParts(new THREE.Vector3(p.x+ad.x*2,1,p.z+ad.z*2),0x50ffaa,6);
+  }
+}
+
+// ALLAYS
+function tickAllays(dt,gs){
+  const p=gs.player;
+  gs.allays.forEach(a=>{
+    if(a.dead){a.respawnTimer-=dt;if(a.respawnTimer<=0){a.dead=false;a.hp=a.maxHp;a.phase='orbit';a.grp.visible=true;}return;}
+    a.attackCooldown-=dt;
+    if(a.phase==='orbit'){
+      a.orbitAng+=a.orbitSpd*dt;
+      const tx=p.x+Math.cos(a.orbitAng)*a.orbitR,tz=p.z+Math.sin(a.orbitAng)*a.orbitR;
+      a.x+=(tx-a.x)*5*dt;a.z+=(tz-a.z)*5*dt;
+      if(a.attackCooldown<=0){
+        const tgt=nearestEnemy(gs,a.x,a.z,14);
+        if(tgt){a.phase='dart';a.dartTarget=tgt;const dx=tgt.x-a.x,dz=tgt.z-a.z,dd=d2(tgt.x,tgt.z,a.x,a.z)||1;a.dartVx=dx/dd*13;a.dartVz=dz/dd*13;a.dartTimer=0.5;}
+      }
+      for(let i=DROPS.length-1;i>=0;i--){const d=DROPS[i];if(d2(d.m.position.x,d.m.position.z,a.x,a.z)<1.8){gs.emeralds+=d.val;scene.remove(d.m);DROPS.splice(i,1);}}
+    } else if(a.phase==='dart'){
+      a.x+=a.dartVx*dt;a.z+=a.dartVz*dt;a.dartTimer-=dt;
+      if(a.dartTarget&&!a.dartTarget.dead&&d2(a.x,a.z,a.dartTarget.x,a.dartTarget.z)<1){hurtEnemy(gs,a.dartTarget,2);a.attackCooldown=1.5;a.phase='return';a.dartTarget=null;}
+      if(a.dartTimer<=0){a.phase='return';a.dartTarget=null;}
+    } else {
+      const tx=p.x+Math.cos(a.orbitAng)*a.orbitR,tz=p.z+Math.sin(a.orbitAng)*a.orbitR;
+      const dx=tx-a.x,dz=tz-a.z,dd=d2(tx,tz,a.x,a.z)||1;
+      if(dd<0.5)a.phase='orbit';else{a.x+=dx/dd*11*dt;a.z+=dz/dd*11*dt;}
+    }
+    // repel/damage vexes
+    gs.enemies.forEach(e=>{if(!e.dead&&e.type==='vex'&&d2(a.x,a.z,e.x,e.z)<1.5)hurtEnemy(gs,e,3);});
+    a.grp.position.set(a.x,Math.sin(Date.now()/400+a.orbitAng)*0.18,a.z);fc(a.grp,a.x,a.z);
+  });
+}
+
+// GOLEM
+function tickGolem(dt,gs){
+  const g=gs.golem;if(!g||g.dead)return;g.attackCooldown-=dt;
+  let best=null,bd=Infinity;
+  gs.enemies.forEach(e=>{if(e.dead)return;const dd=d2(e.x,e.z,g.x,g.z);if(!best||(e.type==='evoker'&&best.type!=='evoker')||dd<bd){best=e;bd=dd;}});
+  if(best){
+    const dx=best.x-g.x,dz=best.z-g.z,dd=d2(best.x,best.z,g.x,g.z)||1;
+    if(dd>g.r+best.r+0.3){g.x+=dx/dd*g.spd*dt;g.z+=dz/dd*g.spd*dt;}
+    else if(g.attackCooldown<=0){
+      g.attackCooldown=1.4;gs.enemies.forEach(e=>{if(!e.dead&&d2(e.x,e.z,g.x,g.z)<5)hurtEnemy(gs,e,15);});
+      spawnParts(new THREE.Vector3(g.x,1,g.z),0xaaaaaa,10);
+    }
+  } else {const dx=-g.x,dz=-g.z,dd=d2(0,0,g.x,g.z)||1;if(dd>6){g.x+=dx/dd*g.spd*0.4*dt;g.z+=dz/dd*g.spd*0.4*dt;}}
+  gs.enemies.forEach(e=>{
+    if(!e.dead&&(e.type==='vindicator'||e.type==='ravager')&&d2(e.x,e.z,g.x,g.z)<g.r+e.r+0.3&&e.attackCooldown<=0){
+      g.hp-=(e.type==='ravager'?18:6);e.attackCooldown=1.2;
+    }
+  });
+  if(g.hp<=0&&!g.dead){g.dead=true;scene.remove(g.grp);addKill('🤖 Iron Golem has fallen!');}
+  if(!g.dead){g.grp.position.set(g.x,0,g.z);setBar(g.grp._bar,g.hp);fc(g.grp,g.x,g.z);}
+}
+
+// KING VILLAGER
+function tickKing(dt,gs){
+  const k=gs.kingVillager;if(!k||k.dead)return;k.summonCooldown-=dt;
+  const thr=nearestEnemy(gs,k.x,k.z,14);
+  if(thr){const dx=k.x-thr.x,dz=k.z-thr.z,dd=d2(k.x,k.z,thr.x,thr.z)||1;k.x+=dx/dd*2.2*dt;k.z+=dz/dd*2.2*dt;}
+  k.x=clamp(k.x,-17,17);k.z=clamp(k.z,-17,17);
+  if(k.summonCooldown<=0){
+    k.summonCooldown=14;const p=edgePos();spawnEnemy(gs,'evoker',p.x,p.z);
+    addKill('👑 King Villager summons an Evoker!');spawnParts(new THREE.Vector3(k.x,1.5,k.z),0xffd700,12);
+  }
+  gs.enemies.forEach(e=>{if(!e.dead&&d2(e.x,e.z,k.x,k.z)<1.2)k.hp-=5*dt;});
+  if(k.hp<=0&&!k.dead){k.dead=true;k.grp.visible=false;document.getElementById('king-lbl').style.display='none';
+    addKill('👑 King Villager the I has been slain!');spawnParts(new THREE.Vector3(k.x,1,k.z),0xffd700,22);}
+  if(!k.dead){k.grp.position.set(k.x,0,k.z);setBar(k.grp._bar,k.hp);fc(k.grp,k.x,k.z);}
+  document.getElementById('king-hp').textContent=Math.max(0,Math.round(k.hp));
+}
+
+// VILLAGERS
+function tickVillagers(dt,gs){
+  gs.villagers.forEach(v=>{
+    if(v.dead)return;v.wanderT-=dt;if(v.wanderT<=0){v.wander=Math.random()*Math.PI*2;v.wanderT=2+Math.random()*2;}
+    const thr=nearestEnemy(gs,v.x,v.z,9);
+    if(thr){const dx=v.x-thr.x,dz=v.z-thr.z,dd=d2(v.x,v.z,thr.x,thr.z)||1;v.x+=dx/dd*3.5*dt;v.z+=dz/dd*3.5*dt;}
+    else{v.x+=Math.cos(v.wander)*0.9*dt;v.z+=Math.sin(v.wander)*0.9*dt;}
+    v.x=clamp(v.x,-17,17);v.z=clamp(v.z,-17,17);
+    v.grp.position.set(v.x,0,v.z);fc(v.grp,v.x,v.z);
+    gs.enemies.forEach(e=>{if(!e.dead&&d2(e.x,e.z,v.x,v.z)<1.2)v.hp-=4*dt;});
+    if(v.hp<=0&&!v.dead){v.dead=true;v.grp.visible=false;spawnParts(new THREE.Vector3(v.x,1,v.z),0xd09050,8);addKill('🏠 A Villager was slain!');}
+    setBar(v.grp._bar,v.hp);
+  });
+}
+
+// BABY VILLAGERS
+function tickBabies(dt,gs){
+  gs.babyVillagers.forEach(b=>{
+    if(b.dead)return;b.bobT+=dt*3.5;b.wanderT-=dt;b.panicTimer=Math.max(0,b.panicTimer-dt);
+    const thr=nearestEnemy(gs,b.x,b.z,11);
+    if(thr){
+      if(b.panicTimer<=0){b.panicTimer=0.6+Math.random()*0.5;b.panicDir=Math.atan2(b.z-thr.z,b.x-thr.x)+(Math.random()-0.5)*1.4;}
+      b.x+=Math.cos(b.panicDir)*5.5*dt;b.z+=Math.sin(b.panicDir)*5.5*dt;
+    } else {
+      if(b.wanderT<=0){b.wander=Math.random()*Math.PI*2;b.wanderT=0.6+Math.random()*1;}
+      b.x+=Math.cos(b.wander)*1.6*dt;b.z+=Math.sin(b.wander)*1.6*dt;
+    }
+    b.x=clamp(b.x,-16,16);b.z=clamp(b.z,-16,16);
+    b.grp.position.set(b.x,Math.abs(Math.sin(b.bobT))*0.12,b.z);fc(b.grp,b.x,b.z);
+    gs.enemies.forEach(e=>{if(!e.dead&&d2(e.x,e.z,b.x,b.z)<1.0)b.hp-=5*dt;});
+    if(b.hp<=0&&!b.dead){b.dead=true;b.grp.visible=false;spawnParts(new THREE.Vector3(b.x,0.8,b.z),0xffcc88,10);addKill('🍼 A Baby Villager was slain!');}
+    setBar(b.grp._bar,b.hp);
+  });
+}
+
+// ENEMIES
+function tickEnemies(dt,gs){
+  const p=gs.player;
+  gs.enemies.forEach(e=>{
+    if(e.dead)return;e.attackCooldown-=dt;
+    const pInvis=p.invis&&d2(p.x,p.z,e.x,e.z)>4;
+    let tx=null,tz=null,isPlayer=false;
+    if(!pInvis){tx=p.x;tz=p.z;isPlayer=true;}
+    else {
+      let bd=Infinity;
+      [...gs.villagers,...gs.babyVillagers].filter(v=>!v.dead).forEach(v=>{const dd=d2(v.x,v.z,e.x,e.z);if(dd<bd){bd=dd;tx=v.x;tz=v.z;}});
+      if(tx===null&&gs.golem&&!gs.golem.dead){tx=gs.golem.x;tz=gs.golem.z;}
+      if(tx===null&&gs.kingVillager&&!gs.kingVillager.dead){tx=gs.kingVillager.x;tz=gs.kingVillager.z;}
+    }
+    if(tx===null)return;
+    const dx=tx-e.x,dz=tz-e.z,dd=d2(tx,tz,e.x,e.z)||1;
+    fc(e.grp,e.x,e.z);
+
+    if(e.type==='pillager'){
+      if(dd>e.range*0.5){e.x+=dx/dd*e.spd*dt;e.z+=dz/dd*e.spd*dt;}
+      else if(dd<e.range*0.3){e.x-=dx/dd*e.spd*0.5*dt;e.z-=dz/dd*e.spd*0.5*dt;}
+      if(dd<e.range&&e.attackCooldown<=0){e.attackCooldown=2;spawnProj(new THREE.Vector3(e.x,1.2,e.z),new THREE.Vector3(dx/dd,0.04,dz/dd),e.dmg);}
+    }
+    else if(e.type==='vindicator'||e.type==='ravager'){
+      e.x+=dx/dd*e.spd*dt;e.z+=dz/dd*e.spd*dt;
+      if(dd<e.r+1.0&&e.attackCooldown<=0){
+        e.attackCooldown=(e.type==='ravager'?1.5:0.9);
+        if(isPlayer){p.hp-=e.dmg;flashDmg();spawnParts(new THREE.Vector3(p.x,1,p.z),0xff2222,4);}
+        else{[...gs.villagers,...gs.babyVillagers].forEach(v=>{if(!v.dead&&d2(v.x,v.z,e.x,e.z)<1.8)v.hp-=e.dmg;});
+          if(gs.golem&&!gs.golem.dead&&d2(gs.golem.x,gs.golem.z,e.x,e.z)<gs.golem.r+e.r+0.5)gs.golem.hp-=e.dmg;}
+      }
+    }
+    else if(e.type==='evoker'){
+      if(dd<10){e.x-=dx/dd*e.spd*dt;e.z-=dz/dd*e.spd*dt;}
+      else if(dd>16){e.x+=dx/dd*e.spd*0.5*dt;e.z+=dz/dd*e.spd*0.5*dt;}
+      e.spellCooldown-=dt;
+      if(e.spellCooldown<=0){
+        e.spellCooldown=4+Math.random()*2;
+        spawnFangs(new THREE.Vector3(e.x,0,e.z),new THREE.Vector3(tx,0,tz));
+        // summon 3 vexes
+        for(let v=0;v<3;v++){const a=Math.random()*Math.PI*2;spawnEnemy(gs,'vex',e.x+Math.cos(a)*2,e.z+Math.sin(a)*2);}
+        spawnParts(new THREE.Vector3(e.x,1.5,e.z),0xff40ff,8);
+      }
+    }
+    else if(e.type==='vex'){
+      e.x+=dx/dd*e.spd*dt;e.z+=dz/dd*e.spd*dt;
+      e.grp.position.y=0.6+Math.sin(Date.now()/300+e.x)*0.3;
+      if(dd<1.0&&e.attackCooldown<=0){
+        e.attackCooldown=1.0;
+        if(isPlayer){p.hp-=e.dmg;flashDmg();}
+        else{[...gs.villagers,...gs.babyVillagers].forEach(v=>{if(!v.dead&&d2(v.x,v.z,e.x,e.z)<1.2)v.hp-=e.dmg;});}
+      }
+    }
+    else if(e.type==='silverCube'){
+      // drifts slowly, absorbs vexes
+      e.x+=Math.cos(Date.now()/2000+e.x)*0.5*dt;e.z+=Math.sin(Date.now()/1700+e.z)*0.5*dt;
+      for(let i=gs.enemies.length-1;i>=0;i--){
+        const v2=gs.enemies[i];
+        if(!v2.dead&&v2.type==='vex'&&d2(v2.x,v2.z,e.x,e.z)<1.8){
+          v2.dead=true;scene.remove(v2.grp);e.absorbedVexes++;
+          spawnParts(new THREE.Vector3(e.x,1,e.z),0x8888ff,5);
+          addKill(`🧊 Sliver Cube absorbed a Vex (${e.absorbedVexes}/5)`);
+        }
+      }
+      if(e.absorbedVexes>=5){
+        spawnParts(new THREE.Vector3(e.x,1.5,e.z),0xffffff,30);
+        gs.enemies.forEach(en=>{if(!en.dead&&d2(en.x,en.z,e.x,e.z)<7)hurtEnemy(gs,en,30);});
+        for(let w=0;w<3;w++){const a=Math.random()*Math.PI*2;spawnEnemy(gs,'wisp',e.x+Math.cos(a)*2,e.z+Math.sin(a)*2);}
+        addKill('🧊 Sliver Cube EXPLODED — Wisps spawned!');
+        e.dead=true;scene.remove(e.grp);return;
+      }
+      e.grp.position.set(e.x,0,e.z);setBar(e.grp._bar,e.hp);return;
+    }
+    else if(e.type==='evokerVillager'){
+      if(dd<12){e.x-=dx/dd*e.spd*dt;e.z-=dz/dd*e.spd*dt;}
+      e.wispCooldown-=dt;
+      if(e.wispCooldown<=0){
+        e.wispCooldown=7+Math.random()*3;
+        for(let w=0;w<2;w++){const a=Math.random()*Math.PI*2;spawnEnemy(gs,'wisp',e.x+Math.cos(a)*2,e.z+Math.sin(a)*2);}
+        addKill('👤 Evoker Villager summons Wisps!');spawnParts(new THREE.Vector3(e.x,1.5,e.z),0x88ffff,8);
+      }
+    }
+    else if(e.type==='wisp'){
+      e.x+=dx/dd*e.spd*dt;e.z+=dz/dd*e.spd*dt;
+      e.grp.position.y=0.8+Math.sin(Date.now()/250+e.z)*0.4;
+      // kill vexes instantly on contact
+      gs.enemies.forEach(v2=>{if(!v2.dead&&v2.type==='vex'&&d2(v2.x,v2.z,e.x,e.z)<1.2){
+        v2.dead=true;scene.remove(v2.grp);spawnParts(new THREE.Vector3(v2.x,0.8,v2.z),0xaaaaff,6);}});
+      if(dd<1.0&&e.attackCooldown<=0){
+        e.attackCooldown=0.6;
+        if(isPlayer){p.hp-=e.dmg;flashDmg();}
+        else{[...gs.villagers,...gs.babyVillagers].forEach(v=>{if(!v.dead&&d2(v.x,v.z,e.x,e.z)<1.0)v.hp-=e.dmg;});}
+      }
+    }
+    else if(e.type==='illusioner'){
+      if(dd>e.range*0.5){e.x+=dx/dd*e.spd*dt;e.z+=dz/dd*e.spd*dt;}
+      else if(dd<e.range*0.3){e.x-=dx/dd*e.spd*0.5*dt;e.z-=dz/dd*e.spd*0.5*dt;}
+      if(dd<e.range&&e.attackCooldown<=0){
+        // fires 3 arrows in rapid burst (3x faster than skeleton)
+        e.attackCooldown=3;
+        for(let shot=0;shot<3;shot++){
+          setTimeout(()=>{
+            if(e.dead||!GS||GS.phase==='gameover')return;
+            const sp=(Math.random()-0.5)*0.12,sp2=(Math.random()-0.5)*0.12;
+            spawnProj(new THREE.Vector3(e.x,1.2,e.z),new THREE.Vector3(dx/dd+sp,0.04,dz/dd+sp2),e.dmg,0x6688ff);
+          },shot*330);
+        }
+      }
+      // blindness
+      e.blindCooldown-=dt;
+      if(e.blindCooldown<=0&&isPlayer){
+        e.blindCooldown=35+Math.random()*10;p.blind=true;p.blindTimer=60;
+        document.getElementById('blind-overlay').style.display='block';
+        document.getElementById('blind-overlay').style.background='rgba(0,0,0,0.90)';
+        document.getElementById('blind-txt').style.display='block';
+        addKill('👁️ BLINDED for 60 seconds by Illusioner!');
+      }
+    }
+    else if(e.type==='archIllager'){
+      if(dd>e.r+2){e.x+=dx/dd*e.spd*dt;e.z+=dz/dd*e.spd*dt;}
+      if(dd<e.r+1.8&&e.attackCooldown<=0){
+        e.attackCooldown=1.0;
+        if(isPlayer){p.hp-=e.dmg;flashDmg();}
+        [...gs.villagers,...gs.babyVillagers].forEach(v=>{if(!v.dead&&d2(v.x,v.z,e.x,e.z)<2.5)v.hp-=e.dmg;});
+      }
+      e.summonCooldown-=dt;
+      if(e.summonCooldown<=0){
+        e.summonCooldown=8+Math.random()*4;
+        [{t:'pillager'},{t:'pillager'},{t:'vindicator'},{t:'evoker'}].forEach(({t})=>{
+          const a=Math.random()*Math.PI*2;spawnEnemy(gs,t,e.x+Math.cos(a)*5,e.z+Math.sin(a)*5);
+        });
+        spawnFangs(new THREE.Vector3(e.x,0,e.z),new THREE.Vector3(tx,0,tz),0xff8800);
+        spawnParts(new THREE.Vector3(e.x,2.2,e.z),0xff8800,18);
+        addKill('👑 Arch-Illager calls reinforcements!');
+      }
+      e.grp.position.y=Math.sin(Date.now()/500)*0.12;
+    }
+
+    // move & update (shared)
+    if(e.type!=='silverCube'&&e.type!=='vex'&&e.type!=='wisp'&&e.type!=='archIllager'){
+      e.x=clamp(e.x,-26,26);e.z=clamp(e.z,-26,26);
+      e.grp.position.set(e.x,e.grp.position.y||0,e.z);
+    } else if(e.type!=='silverCube'){
+      e.x=clamp(e.x,-26,26);e.z=clamp(e.z,-26,26);
+      e.grp.position.x=e.x;e.grp.position.z=e.z;
+    }
+    setBar(e.grp._bar,e.hp);
+  });
+  gs.enemies=gs.enemies.filter(e=>!e.dead);
+}
+
+function hurtEnemy(gs,e,dmg){
+  e.hp-=dmg;spawnParts(new THREE.Vector3(e.x,1.2,e.z),0xff4444,4);
+  if(e.hp<=0&&!e.dead){
+    e.dead=true;
+    const drops={evoker:5,ravager:6,archIllager:50,illusioner:4,vindicator:3,evokerVillager:5,silverCube:3,wisp:2};
+    spawnDrop(new THREE.Vector3(e.x,0,e.z),drops[e.type]||1);
+    if(e.type==='archIllager')addKill('💀 ARCH-ILLAGER HAS BEEN DEFEATED!!');
+    scene.remove(e.grp);
+  }
+}
+function nearestEnemy(gs,x,z,maxR){
+  let best=null,bd=maxR;
+  gs.enemies.forEach(e=>{if(e.dead)return;const dd=d2(e.x,e.z,x,z);if(dd<bd){bd=dd;best=e;}});
+  return best;
+}
+
+// HUD
+function tickHUD(gs){
+  const p=gs.player;
+  const hrt=Math.max(0,Math.round(p.hp));
+  document.getElementById('hearts').textContent='♥'.repeat(hrt)+'♡'.repeat(Math.max(0,p.maxHp-hrt));
+  document.getElementById('em-lbl').textContent=gs.emeralds;
+  document.getElementById('wave-lbl').textContent=`WAVE ${gs.wave} / ${gs.maxWaves}`;
+  const pl=document.getElementById('phase-lbl');
+  if(gs.phase==='prep'){pl.textContent=`PREP: ${Math.ceil(gs.prepTimer)}s`;pl.style.color='#7af';}
+  else{pl.textContent=`ENEMIES: ${gs.enemies.filter(e=>!e.dead).length}`;pl.style.color='#f77';}
+  const lv=gs.villagers.filter(v=>!v.dead).length,lb=gs.babyVillagers.filter(b=>!b.dead).length;
+  document.getElementById('vil-lbl').textContent=Array(5).fill(0).map((_,i)=>i<lv?'●':'○').join('');
+  document.getElementById('baby-lbl').textContent=Array(3).fill(0).map((_,i)=>i<lb?'◦':'·').join('');
+  document.getElementById('allay-lbl').textContent=`ALLAYS: ${gs.allays.filter(a=>!a.dead).length}`;
+  const gol=gs.golem;
+  document.getElementById('golem-lbl').textContent=gol&&!gol.dead?'GOLEM '+'●'.repeat(Math.ceil(gol.hp/20))+'○'.repeat(Math.max(0,5-Math.ceil(gol.hp/20))):'GOLEM ✝';
+  // mini enemy roster
+  const et=gs.enemies.filter(e=>!e.dead);const by={};et.forEach(e=>by[e.type]=(by[e.type]||0)+1);
+  document.getElementById('enemy-lbl').textContent=Object.entries(by).map(([t,n])=>`${n}×${t}`).join(' ').substring(0,55);
+  if(gs.kingVillager&&!gs.kingVillager.dead)document.getElementById('king-hp').textContent=Math.max(0,Math.round(gs.kingVillager.hp));
+}
+
+// UI
+function flashDmg(){const el=document.getElementById('dmg-flash');el.style.background='rgba(255,0,0,0.38)';setTimeout(()=>el.style.background='rgba(255,0,0,0)',130);}
+function showBanner(gs){
+  const b=document.getElementById('wave-banner');
+  b.textContent=gs.wave===gs.maxWaves?'⚠ WAVE 7 — ARCH-ILLAGER RISES! ⚠':`WAVE ${gs.wave} INCOMING!`;
+  b.style.display='block';setTimeout(()=>b.style.display='none',2500);
+}
+function showEnd(won,gs){
+  const ol=document.getElementById('overlay');ol.style.display='flex';
+  ol.innerHTML=`
+    <h1 style="color:${won?'#5aff5a':'#ff4444'}">${won?'🏆 RAID DEFEATED!':'💀 VILLAGE LOST'}</h1>
+    <p>
+      Wave reached: ${gs.wave} / ${gs.maxWaves}<br>
+      Emeralds collected: ${gs.emeralds}<br>
+      Villagers: ${gs.villagers.filter(v=>!v.dead).length}/5 · Babies: ${gs.babyVillagers.filter(b=>!b.dead).length}/3<br>
+      ${gs.kingVillager?(gs.kingVillager.dead?'👑 King Villager fell.':'👑 King Villager survived!'):''}
+    </p>
+    <button onclick="startGame()">▶ PLAY AGAIN</button>
+  `;
+  if(document.pointerLockElement)document.exitPointerLock();
+}
+
+// INPUT
+window.addEventListener('keydown',e=>{KEYS[e.key]=true;if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();});
+window.addEventListener('keyup',e=>{KEYS[e.key]=false;});
+document.getElementById('c').addEventListener('click',()=>{
+  if(!document.pointerLockElement)document.getElementById('c').requestPointerLock();else mouseAtk=true;
+});
+document.addEventListener('mousemove',e=>{
+  if(document.pointerLockElement===document.getElementById('c')){yaw-=e.movementX*0.002;pitch=clamp(pitch-e.movementY*0.002,-0.5,0.45);}
+});
+document.addEventListener('pointerlockchange',()=>{document.getElementById('hint').style.opacity=document.pointerLockElement?'0':'1';});
+
+// LOOP
+function loop(now){
+  const dt=Math.min((now-GS.lastTime)/1000,0.05);GS.lastTime=now;
+  if(GS.phase!=='gameover'&&GS.phase!=='win')tick(dt);
+  renderer.render(scene,camera);animId=requestAnimationFrame(loop);
+}
+
+// START
+function startGame(){
+  document.getElementById('overlay').style.display='none';
+  if(GS){
+    GS.enemies.forEach(e=>scene.remove(e.grp));
+    GS.allays.forEach(a=>scene.remove(a.grp));
+    GS.villagers.forEach(v=>scene.remove(v.grp));
+    GS.babyVillagers.forEach(b=>scene.remove(b.grp));
+    if(GS.golem)scene.remove(GS.golem.grp);
+    if(GS.kingVillager)scene.remove(GS.kingVillager.grp);
+    DROPS.forEach(d=>scene.remove(d.m));DROPS.length=0;
+    PROJS.forEach(p=>scene.remove(p.m));PROJS.length=0;
+    FANGS.forEach(f=>scene.remove(f.m));FANGS.length=0;
+    PARTS.forEach(p=>scene.remove(p.m));PARTS.length=0;
+    KILLS.length=0;
+  }
+  yaw=0;pitch=0;
+  document.getElementById('blind-overlay').style.background='rgba(0,0,0,0)';
+  document.getElementById('blind-txt').style.display='none';
+  document.getElementById('king-lbl').style.display='none';
+  GS=freshGS();buildMap();
+  spawnVillagers(GS);spawnBabyVillagers(GS);spawnAllays(GS);spawnGolem(GS);
+  GS.lastTime=performance.now();
+  if(animId)cancelAnimationFrame(animId);
+  loop(GS.lastTime);
+  document.getElementById('c').requestPointerLock();
+}
+</script>
+</body>
+</html>
