@@ -4,93 +4,225 @@
 <meta charset="UTF-8">
 <title>Project: Raid 3D</title>
 <style>
-  *{margin:0;padding:0;box-sizing:border-box;}
-  body{background:#000;overflow:hidden;font-family:'Courier New',monospace;}
-  #c{display:block;width:100vw;height:100vh;}
-  #hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;
-    align-items:flex-start;padding:8px 12px;pointer-events:none;z-index:10;gap:6px;}
-  .hp{background:rgba(0,0,0,0.75);border:2px solid #555;padding:6px 10px;font-size:10px;
-    color:#fff;line-height:2;min-width:130px;}
-  .hp span{color:#adf;}
-  #overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;
-    align-items:center;justify-content:center;z-index:20;gap:14px;overflow-y:auto;padding:20px;}
-  #overlay h1{font-size:clamp(16px,3.5vw,28px);color:#5aff5a;
-    text-shadow:0 0 16px rgba(90,255,90,0.5);letter-spacing:3px;text-align:center;}
-  #overlay p{font-size:clamp(8px,1.3vw,11px);color:#aaa;text-align:center;line-height:2.2;max-width:480px;}
-  #overlay button{font-family:'Courier New',monospace;font-size:12px;background:#2a6a2a;color:#5aff5a;
-    border:2px solid #5aff5a;padding:10px 24px;cursor:pointer;letter-spacing:2px;transition:.1s;}
-  #overlay button:hover{background:#5aff5a;color:#000;}
-  #wave-banner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-    background:rgba(160,0,0,0.9);color:#fff;font-size:clamp(11px,2vw,18px);
-    padding:12px 28px;border:2px solid #ff4444;z-index:15;pointer-events:none;
-    display:none;text-align:center;font-family:'Courier New',monospace;letter-spacing:3px;}
-  #crosshair{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-    width:18px;height:18px;pointer-events:none;z-index:5;}
-  #crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(255,255,255,0.7);}
-  #crosshair::before{left:50%;top:0;width:1.5px;height:100%;transform:translateX(-50%);}
-  #crosshair::after{top:50%;left:0;height:1.5px;width:100%;transform:translateY(-50%);}
-  #dmg-flash{position:fixed;inset:0;pointer-events:none;z-index:4;background:rgba(255,0,0,0);transition:background .1s;}
-  #blind-overlay{position:fixed;inset:0;pointer-events:none;z-index:6;background:rgba(0,0,0,0);transition:background 1s;}
-  #invis-overlay{position:fixed;inset:0;pointer-events:none;z-index:3;
-    background:rgba(80,140,255,0.07);border:3px solid rgba(80,140,255,0.18);display:none;}
-  #hint{position:fixed;bottom:8px;right:12px;font-size:8px;color:rgba(255,255,255,0.25);
-    pointer-events:none;z-index:10;text-align:right;line-height:2;}
-  #kill-feed{position:fixed;bottom:30px;left:12px;font-size:9px;color:#ffd700;
-    pointer-events:none;z-index:10;line-height:2;max-width:320px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a1a0a;overflow:hidden;font-family:'Courier New',monospace;color:#fff;}
+#c{display:block;width:100vw;height:100vh;position:absolute;top:0;left:0;}
+
+/* ── MENU ── */
+#menu{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#0a2a0a 0%,#001a00 60%,#000 100%);}
+#menu-logo{max-width:min(480px,85vw);image-rendering:pixelated;margin-bottom:24px;
+  filter:drop-shadow(0 0 30px rgba(90,255,90,0.5));}
+.menu-btn{font-family:'Courier New',monospace;font-size:14px;background:rgba(0,80,0,0.7);
+  color:#5aff5a;border:2px solid #5aff5a;padding:12px 36px;cursor:pointer;
+  letter-spacing:3px;margin:5px;min-width:220px;text-align:center;
+  transition:all .15s;text-shadow:0 0 8px #5aff5a;}
+.menu-btn:hover{background:#5aff5a;color:#000;box-shadow:0 0 20px #5aff5a;}
+.menu-btn.red{color:#ff4444;border-color:#ff4444;text-shadow:0 0 8px #ff4444;}
+.menu-btn.red:hover{background:#ff4444;color:#000;}
+#menu-stars{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
+.star{position:absolute;background:#5aff5a;border-radius:50%;animation:twinkle 2s infinite;}
+@keyframes twinkle{0%,100%{opacity:.2}50%{opacity:.8}}
+#menu-version{position:absolute;bottom:10px;right:14px;font-size:9px;color:rgba(90,255,90,0.35);}
+
+/* ── HUD ── */
+#hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;
+  align-items:flex-start;padding:8px 12px;pointer-events:none;z-index:10;gap:6px;display:none;}
+.hb{background:rgba(0,0,0,0.78);border:2px solid #444;padding:6px 10px;font-size:10px;
+  color:#fff;line-height:1.9;}
+.hb span{color:#adf;}
+#inv-bar{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);
+  display:flex;gap:4px;pointer-events:none;z-index:10;display:none;}
+.inv-slot{width:44px;height:44px;background:rgba(0,0,0,0.7);border:2px solid #666;
+  display:flex;align-items:center;justify-content:center;font-size:10px;
+  text-align:center;cursor:pointer;pointer-events:all;transition:.1s;flex-direction:column;line-height:1.2;}
+.inv-slot:hover{border-color:#5aff5a;}
+.inv-slot.active{border-color:#5aff5a;background:rgba(0,80,0,0.6);}
+.inv-slot.empty{border-color:#333;color:#444;}
+
+/* ── SHOP ── */
+#shop{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:50;display:none;
+  align-items:center;justify-content:center;}
+#shop-inner{background:#0a1a0a;border:3px solid #00ff80;padding:24px;max-width:520px;width:90%;
+  max-height:90vh;overflow-y:auto;}
+#shop-inner h2{color:#00ff80;font-size:14px;letter-spacing:2px;margin-bottom:4px;}
+#shop-inner p{font-size:9px;color:#888;margin-bottom:16px;}
+.shop-item{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid #333;
+  margin-bottom:8px;cursor:pointer;transition:.1s;}
+.shop-item:hover{border-color:#00ff80;background:rgba(0,80,40,0.4);}
+.shop-item-icon{font-size:22px;min-width:36px;text-align:center;}
+.shop-item-info{flex:1;}
+.shop-item-name{font-size:11px;font-weight:bold;color:#fff;}
+.shop-item-desc{font-size:9px;color:#888;margin-top:2px;}
+.shop-item-price{font-size:11px;color:#00ff80;min-width:60px;text-align:right;}
+.shop-item-price.unaffordable{color:#ff4444;}
+#shop-balance{color:#00ff80;font-size:11px;margin-bottom:12px;}
+#shop-close{margin-top:12px;width:100%;}
+
+/* ── OVERLAYS ── */
+#wave-banner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:rgba(160,0,0,0.92);color:#fff;font-size:clamp(11px,2vw,17px);
+  padding:12px 28px;border:2px solid #ff4444;z-index:15;pointer-events:none;
+  display:none;text-align:center;letter-spacing:2px;}
+#crosshair{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:18px;height:18px;pointer-events:none;z-index:5;}
+#crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(255,255,255,0.7);}
+#crosshair::before{left:50%;top:0;width:1.5px;height:100%;transform:translateX(-50%);}
+#crosshair::after{top:50%;left:0;height:1.5px;width:100%;transform:translateY(-50%);}
+#dmg-flash{position:fixed;inset:0;pointer-events:none;z-index:4;background:rgba(255,0,0,0);transition:background .12s;}
+#blind-overlay{position:fixed;inset:0;pointer-events:none;z-index:6;background:rgba(0,0,0,0);transition:background 1.2s;}
+#invis-overlay{position:fixed;inset:0;pointer-events:none;z-index:3;
+  background:rgba(80,140,255,0.07);border:3px solid rgba(80,140,255,0.2);display:none;}
+#hint{position:fixed;bottom:8px;right:12px;font-size:8px;color:rgba(255,255,255,0.22);
+  pointer-events:none;z-index:10;text-align:right;line-height:2;}
+#kill-feed{position:fixed;bottom:68px;left:12px;font-size:9px;color:#ffd700;
+  pointer-events:none;z-index:10;line-height:2;max-width:340px;}
+#gameover-screen{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:80;
+  display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+#gameover-screen h1{font-size:clamp(18px,4vw,30px);text-align:center;}
+#gameover-screen p{font-size:10px;color:#aaa;text-align:center;line-height:2.2;}
 </style>
 </head>
 <body>
+
+<!-- MINECRAFT-STYLE MENU -->
+<div id="menu">
+  <div id="menu-stars"></div>
+  <img id="menu-logo" src="https://files.catbox.moe/y5k7lr.png" alt="Project: Raid">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:8px;">
+    <button class="menu-btn" onclick="startGame()">▶ SINGLEPLAYER</button>
+    <button class="menu-btn" onclick="showHow()">📖 HOW TO PLAY</button>
+    <button class="menu-btn red" onclick="showCredits()">🎬 BLUE VILLAGER PRODUCTIONS</button>
+  </div>
+  <div id="menu-version">Project: Raid 3D · v2.0 · 420 Waves</div>
+</div>
+
+<!-- HOW TO PLAY / CREDITS panels (reuse gameover-screen slot) -->
+<div id="how-panel" style="position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:110;display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;overflow-y:auto;">
+  <h2 style="color:#5aff5a;font-size:16px;letter-spacing:2px;">HOW TO PLAY</h2>
+  <p style="font-size:10px;color:#ccc;text-align:center;line-height:2.2;max-width:440px;">
+    WASD = Move · Mouse = Look · Click/Space = Attack<br>
+    Click game window to lock pointer<br><br>
+    👻 Emerald Sword + Infinite Invisibility (breaks 2s on attack)<br>
+    ✦ Allays orbit you, attack enemies, collect emeralds<br>
+    🤖 Iron Golem tanks &amp; targets Evokers<br>
+    💎 Collect emeralds from kills · Shop with Blue Villager<br>
+    🛒 Press E near Blue Villager to open the shop<br>
+    🧊 Sulver Cube absorbs 5 Vexes → EXPLODES into ally Wisps<br>
+    👁️ Illusioner fires 3-arrow bursts + blinds you for 60s<br>
+    👑 Boss waves every 60 rounds — Arch-Illager!<br>
+    🏙️ Defend Emerald City across 420 waves (7 hours)<br>
+  </p>
+  <button class="menu-btn" onclick="document.getElementById('how-panel').style.display='none'">← BACK</button>
+</div>
+
+<div id="credits-panel" style="position:fixed;inset:0;background:rgba(0,0,0,0.97);z-index:110;display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;overflow-y:auto;">
+  <img src="https://files.catbox.moe/rp5db0.png" style="max-width:260px;image-rendering:pixelated;
+    filter:drop-shadow(0 0 20px rgba(0,200,255,0.5));">
+  <h2 style="color:#00ccff;font-size:14px;letter-spacing:3px;">BLUE VILLAGER PRODUCTIONS INC.</h2>
+  <p style="font-size:10px;color:#aaa;text-align:center;line-height:2.4;max-width:400px;">
+    An Animation Studio &amp; Production Company<br><br>
+    Project: Raid 3D is produced by Blue Villager Productions Inc.<br>
+    All characters, textures and game concepts are original works.<br><br>
+    <span style="color:#00ccff;">Executive Producer</span> · Blue Villager<br>
+    <span style="color:#00ccff;">King Villager the I</span> · Age 215 · Still somehow alive<br>
+    <span style="color:#00ccff;">Special Thanks</span> · The Iron Golem, The Allays<br>
+  </p>
+  <button class="menu-btn" onclick="document.getElementById('credits-panel').style.display='none'">← BACK</button>
+</div>
+
+<!-- CANVAS -->
 <canvas id="c"></canvas>
 
+<!-- HUD -->
 <div id="hud">
-  <div class="hp">
+  <div class="hb" style="min-width:120px;">
     <div id="hearts">♥♥♥♥♥♥♥♥♥♥</div>
-    <div>🗡️ EMERALD SWORD</div>
-    <div id="invis-txt">👻 <span>INVISIBLE</span></div>
-    <div id="blind-txt" style="color:#888;display:none;">🙈 BLINDED</div>
+    <div>🗡️ SWORD</div>
+    <div id="invis-txt">👻 <span>INVIS</span></div>
+    <div id="blind-txt" style="color:#888;display:none;">🙈 BLIND</div>
   </div>
-  <div class="hp" style="text-align:center;flex:1;">
-    <div id="wave-lbl">WAVE 1 / 420</div>
-    <div id="wave-prog" style="font-size:7px;color:#888;letter-spacing:0;"></div>
-    <div>💎 <span id="em-lbl">0</span></div>
-    <div id="phase-lbl" style="color:#7af;">PREP: 10s</div>
-    <div id="enemy-lbl" style="color:#f99;font-size:8px;"></div>
+  <div class="hb" style="text-align:center;flex:1;min-width:160px;">
+    <div id="wave-lbl" style="font-size:11px;">WAVE 1 / 420</div>
+    <div id="wave-prog" style="font-size:7px;color:#5a5;letter-spacing:-1px;"></div>
+    <div>💎 <span id="em-lbl">0</span> &nbsp; <span id="phase-lbl" style="color:#7af;">PREP</span></div>
+    <div id="enemy-lbl" style="font-size:7px;color:#f99;"></div>
   </div>
-  <div class="hp" style="text-align:right;">
-    <div>🏠 <span id="vil-lbl">●●●●●</span> <span id="baby-lbl" style="color:#ffd;font-size:9px;">◦◦◦</span></div>
-    <div>✦ <span id="allay-lbl">ALLAYS: 3</span></div>
-    <div>🤖 <span id="golem-lbl">GOLEM ●●●●●</span></div>
-    <div id="king-lbl" style="color:#ffd700;display:none;">👑 KING: <span id="king-hp">200</span>hp</div>
+  <div class="hb" style="text-align:right;min-width:120px;">
+    <div>🏠 <span id="vil-lbl">●●●●●</span> <span id="baby-lbl" style="font-size:8px;color:#ffd;">◦◦◦</span></div>
+    <div>✦ <span id="allay-lbl">3</span> &nbsp;🤖 <span id="golem-lbl">●●●●●</span></div>
+    <div id="king-lbl" style="color:#ffd700;display:none;">👑 <span id="king-hp">200</span>hp</div>
+    <div style="font-size:8px;color:#888;">E = SHOP</div>
   </div>
 </div>
 
+<!-- INVENTORY BAR -->
+<div id="inv-bar">
+  <div class="inv-slot active" id="slot-0" onclick="selectSlot(0)">🗡️<br>Sword</div>
+  <div class="inv-slot empty" id="slot-1" onclick="selectSlot(1)"></div>
+  <div class="inv-slot empty" id="slot-2" onclick="selectSlot(2)"></div>
+  <div class="inv-slot empty" id="slot-3" onclick="selectSlot(3)"></div>
+  <div class="inv-slot empty" id="slot-4" onclick="selectSlot(4)"></div>
+</div>
+
+<!-- SHOP -->
+<div id="shop">
+  <div id="shop-inner">
+    <h2>🛒 BLUE VILLAGER SHOP</h2>
+    <p>Trade your emeralds for powerful items!</p>
+    <div id="shop-balance">💎 Emeralds: 0</div>
+    <div id="shop-items"></div>
+    <button class="menu-btn" id="shop-close" onclick="closeShop()">✕ CLOSE SHOP</button>
+  </div>
+</div>
+
+<!-- OVERLAYS -->
 <div id="wave-banner"></div>
 <div id="crosshair"></div>
 <div id="dmg-flash"></div>
 <div id="blind-overlay"></div>
 <div id="invis-overlay"></div>
 <div id="kill-feed"></div>
-<div id="hint">WASD=MOVE · MOUSE=LOOK · CLICK/SPACE=ATTACK<br>(click game to lock pointer)</div>
+<div id="hint">WASD=MOVE · MOUSE=LOOK · CLICK/SPACE=ATTACK · E=SHOP</div>
 
-<div id="overlay">
-  <h1>⚔️ PROJECT: RAID 3D ⚔️</h1>
-  <p>
-    Defend the village across 420 waves — 7 hours of raid!<br><br>
-    👻 Invisibility breaks on attack for 2s<br>
-    ✦ Allays orbit &amp; attack · repel Vexes<br>
-    🤖 Iron Golem tanks, targets Evokers<br>
-    🧊 Sulver Cube absorbs 5 Vexes then EXPLODES into ally Wisps<br>
-    💀 Cyan Wisps = friendly · White Wisps = hostile (10x Vex strength)<br>
-    👁️ Illusioner blinds you for 60s<br>
-    👑 Arch-Illager is the Wave 7 final boss<br>
-    🧓 King Villager (215 yrs old) &amp; Evoker Villager start on your side<br><br>
-    WASD · Mouse Look · Click/Space = Attack
-  </p>
-  <button onclick="startGame()">▶ BEGIN RAID</button>
+<!-- GAME OVER -->
+<div id="gameover-screen">
+  <h1 id="go-title">💀 VILLAGE LOST</h1>
+  <p id="go-body"></p>
+  <button class="menu-btn" onclick="returnToMenu()">← MAIN MENU</button>
+  <button class="menu-btn" onclick="startGame()">↺ PLAY AGAIN</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
+// ── MENU STARS ────────────────────────────────────────────────────────────────
+(function(){
+  const s=document.getElementById('menu-stars');
+  for(let i=0;i<60;i++){
+    const d=document.createElement('div');
+    d.className='star';
+    d.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;
+      width:${1+Math.random()*2}px;height:${1+Math.random()*2}px;
+      animation-delay:${Math.random()*2}s;animation-duration:${1.5+Math.random()*2}s;`;
+    s.appendChild(d);
+  }
+})();
+function showHow(){document.getElementById('how-panel').style.display='flex';}
+function showCredits(){document.getElementById('credits-panel').style.display='flex';}
+function returnToMenu(){
+  document.getElementById('gameover-screen').style.display='none';
+  document.getElementById('hud').style.display='none';
+  document.getElementById('inv-bar').style.display='none';
+  document.getElementById('crosshair').style.display='none';
+  document.getElementById('hint').style.display='block';
+  document.getElementById('menu').style.display='flex';
+  if(document.pointerLockElement)document.exitPointerLock();
+  if(animId){cancelAnimationFrame(animId);animId=null;}
+}
+
+// ── TEXTURES ──────────────────────────────────────────────────────────────────
 const TEX_URLS={
   villager:      'https://files.catbox.moe/bo4gde.png',
   babyVillager:  'https://files.catbox.moe/5dhp4f.png',
@@ -107,67 +239,38 @@ const TEX_URLS={
   illusioner:    'https://files.catbox.moe/cxjotx.png',
   archIllager:   'https://files.catbox.moe/rt3rtv.gif',
   kingVillager:  'https://files.catbox.moe/pxo6gp.png',
+  blueVillager:  'https://files.catbox.moe/ulxv63.png',
 };
-const TL=new THREE.TextureLoader();
-TL.crossOrigin='anonymous';
+const TL=new THREE.TextureLoader();TL.crossOrigin='anonymous';
 const TX={};
 Object.entries(TEX_URLS).forEach(([k,v])=>{
-  TX[k]=TL.load(v);
-  TX[k].magFilter=THREE.NearestFilter;
-  TX[k].minFilter=THREE.NearestFilter;
+  TX[k]=TL.load(v);TX[k].magFilter=THREE.NearestFilter;TX[k].minFilter=THREE.NearestFilter;
 });
 
-// SCENE
+// ── THREE SETUP ───────────────────────────────────────────────────────────────
 const renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:false});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
 renderer.shadowMap.enabled=true;
 renderer.setSize(window.innerWidth,window.innerHeight);
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x7ab8f5);
-scene.fog=new THREE.Fog(0x7ab8f5,35,130);
+scene.fog=new THREE.Fog(0x7ab8f5,40,140);
 const camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,200);
 camera.position.set(0,1.7,0);
 window.addEventListener('resize',()=>{
   renderer.setSize(window.innerWidth,window.innerHeight);
-  camera.aspect=window.innerWidth/window.innerHeight;
-  camera.updateProjectionMatrix();
+  camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();
 });
-
-// LIGHTING
-const sun=new THREE.DirectionalLight(0xfff8e0,1.3);
+const sun=new THREE.DirectionalLight(0xfff8e0,1.2);
 sun.position.set(20,40,20);sun.castShadow=true;
-sun.shadow.camera.left=-55;sun.shadow.camera.right=55;
-sun.shadow.camera.top=55;sun.shadow.camera.bottom=-55;
-sun.shadow.camera.far=120;sun.shadow.mapSize.set(1024,1024);
-scene.add(sun,new THREE.AmbientLight(0x8ab4f0,0.75));
+sun.shadow.mapSize.set(512,512);
+sun.shadow.camera.left=-60;sun.shadow.camera.right=60;
+sun.shadow.camera.top=60;sun.shadow.camera.bottom=-60;sun.shadow.camera.far=130;
+scene.add(sun,new THREE.AmbientLight(0x8ab4f0,0.8));
 
-// MAP
-const BUILDINGS=[];let mapBuilt=false;
-function buildMap(){
-  if(mapBuilt)return;mapBuilt=true;
-  const g=new THREE.Mesh(new THREE.PlaneGeometry(90,90),new THREE.MeshLambertMaterial({color:0x4a7a3a}));
-  g.rotation.x=-Math.PI/2;g.receiveShadow=true;scene.add(g);
-  const pm=new THREE.MeshLambertMaterial({color:0xb8a070});
-  [[90,4],[4,90]].forEach(([w,d])=>{const p=new THREE.Mesh(new THREE.BoxGeometry(w,0.02,d),pm);p.position.y=0.01;p.receiveShadow=true;scene.add(p);});
-  const well=new THREE.Mesh(new THREE.CylinderGeometry(1.2,1.2,1.2,12),new THREE.MeshLambertMaterial({color:0x606060}));
-  well.position.y=0.6;well.castShadow=true;scene.add(well);
-  const wat=new THREE.Mesh(new THREE.CylinderGeometry(0.9,0.9,0.1,12),new THREE.MeshLambertMaterial({color:0x2080ff}));
-  wat.position.y=1.22;scene.add(wat);
-  const bpos=[[-14,-14],[14,-14],[-14,14],[14,14],[-4,-14],[4,14],[-14,0],[14,0]];
-  bpos.forEach(([x,z])=>{
-    const w=new THREE.Mesh(new THREE.BoxGeometry(5,3.5,4.5),new THREE.MeshLambertMaterial({color:0x8b6040}));
-    w.position.set(x,1.75,z);w.castShadow=true;w.receiveShadow=true;scene.add(w);
-    const r=new THREE.Mesh(new THREE.ConeGeometry(4,2,4),new THREE.MeshLambertMaterial({color:0x5a3020}));
-    r.position.set(x,4.5,z);r.rotation.y=Math.PI/4;r.castShadow=true;scene.add(r);
-    BUILDINGS.push({x,z,hw:2.5,hd:2.25});
-  });
-  for(let i=-20;i<=20;i+=3){
-    [-20,20].forEach(z=>{const m=new THREE.Mesh(new THREE.BoxGeometry(0.3,1.2,0.3),new THREE.MeshLambertMaterial({color:0xc8a060}));m.position.set(i,0.6,z);scene.add(m);});
-    [-20,20].forEach(x=>{const m=new THREE.Mesh(new THREE.BoxGeometry(0.3,1.2,0.3),new THREE.MeshLambertMaterial({color:0xc8a060}));m.position.set(x,0.6,i);scene.add(m);});
-  }
-}
-
-// HELPERS
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function d2(ax,az,bx,bz){return Math.hypot(ax-bx,az-bz);}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 function makeSprite(key,h,w){
   const mat=new THREE.SpriteMaterial({map:TX[key],transparent:true,alphaTest:0.05});
   const s=new THREE.Sprite(mat);s.scale.set(w||h*0.8,h,1);return s;
@@ -179,7 +282,7 @@ function makeBar(max,w=1.4){
   fg.position.z=0.01;g.add(fg);g._fg=fg;g._w=w;g._max=max;return g;
 }
 function setBar(bar,hp){
-  const p=Math.max(0,hp/bar._max);bar._fg.scale.x=p;bar._fg.position.x=bar._w*(p-1)/2;
+  if(!bar)return;const p=Math.max(0,hp/bar._max);bar._fg.scale.x=p;bar._fg.position.x=bar._w*(p-1)/2;
   bar._fg.material.color.setHex(p>0.5?0x44ff44:p>0.25?0xffaa00:0xff2222);
 }
 function makeEnt(key,h,hpMax,bw){
@@ -189,15 +292,144 @@ function makeEnt(key,h,hpMax,bw){
   g._bar=bar;g._sprite=s;return g;
 }
 function fc(grp,x,z){grp.rotation.y=Math.atan2(camera.position.x-x,camera.position.z-z);}
-function d2(ax,az,bx,bz){return Math.hypot(ax-bx,az-bz);}
-function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 
-// PARTICLES
+// ── MAP — EMERALD CITY ────────────────────────────────────────────────────────
+const BUILDINGS=[];let mapBuilt=false;
+const EMERALD_COLOR=0x2a8a4a;
+const EMERALD_TRIM=0x00ff80;
+
+function buildMap(){
+  if(mapBuilt)return;mapBuilt=true;
+
+  // Emerald-tinted ground
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(120,120),
+    new THREE.MeshLambertMaterial({color:0x3a6a3a}));
+  ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+
+  // Emerald city paths (wider, tiled look)
+  const pm=new THREE.MeshLambertMaterial({color:0x1a5a4a});
+  [[120,6],[6,120]].forEach(([w,d])=>{
+    const p=new THREE.Mesh(new THREE.BoxGeometry(w,0.04,d),pm);p.position.y=0.02;p.receiveShadow=true;scene.add(p);
+  });
+  // secondary paths
+  const pm2=new THREE.MeshLambertMaterial({color:0x156040});
+  [[-12,0,4,120],[12,0,4,120],[0,-12,120,4],[0,12,120,4]].forEach(([x,z,w,d])=>{
+    const p=new THREE.Mesh(new THREE.BoxGeometry(w,0.03,d),pm2);p.position.set(x,0.015,z);p.receiveShadow=true;scene.add(p);
+  });
+
+  // Central fountain / emerald well
+  const wellMat=new THREE.MeshLambertMaterial({color:0x2aaa6a});
+  const well=new THREE.Mesh(new THREE.CylinderGeometry(2,2.4,1,12),wellMat);
+  well.position.y=0.5;well.castShadow=true;scene.add(well);
+  const pool=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.6,0.1,12),
+    new THREE.MeshLambertMaterial({color:0x00ff80,emissive:0x003a20}));
+  pool.position.y=1.05;scene.add(pool);
+
+  // Blue Villager Productions Inc. building (large, distinctive)
+  buildBVP();
+
+  // Emerald Shop building
+  buildShopBuilding();
+
+  // City buildings (emerald-themed)
+  const cityPos=[
+    [-16,-16,6,7,5],[-16,16,6,7,5],[16,-16,6,7,5],[16,16,6,7,5],
+    [-6,-16,4,5,4],[6,-16,4,5,4],[-6,16,4,5,4],[6,16,4,5,4],
+    [-16,-6,4,9,4],[-16,6,4,9,4],[16,-6,4,9,4],[16,6,4,9,4],
+    [-22,-4,3,6,3],[-22,4,3,6,3],[22,-4,3,6,3],[22,4,3,6,3],
+  ];
+  cityPos.forEach(([x,z,w,h,d])=>{
+    const shade=0x1a6a3a+(Math.random()*0x103010|0);
+    const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
+      new THREE.MeshLambertMaterial({color:shade}));
+    wall.position.set(x,h/2,z);wall.castShadow=true;wall.receiveShadow=true;scene.add(wall);
+    // emerald trim on top
+    const trim=new THREE.Mesh(new THREE.BoxGeometry(w+0.2,0.3,d+0.2),
+      new THREE.MeshLambertMaterial({color:0x00ff80,emissive:0x003a20}));
+    trim.position.set(x,h+0.15,z);scene.add(trim);
+    // windows (simple bright squares)
+    for(let wy=1;wy<h-0.5;wy+=1.4){
+      const win=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.5,0.05),
+        new THREE.MeshBasicMaterial({color:0xffe080}));
+      win.position.set(x+w/2+0.01,wy,z+(Math.random()-0.5)*(d-1));scene.add(win);
+    }
+    BUILDINGS.push({x,z,hw:w/2,hd:d/2});
+  });
+
+  // Fence / city walls
+  const fmat=new THREE.MeshLambertMaterial({color:0x2aaa6a});
+  for(let i=-26;i<=26;i+=3.5){
+    [-26,26].forEach(zz=>{const m=new THREE.Mesh(new THREE.BoxGeometry(0.4,1.8,0.4),fmat);m.position.set(i,0.9,zz);scene.add(m);});
+    [-26,26].forEach(xx=>{const m=new THREE.Mesh(new THREE.BoxGeometry(0.4,1.8,0.4),fmat);m.position.set(xx,0.9,i);scene.add(m);});
+  }
+  // Wall beams connecting posts
+  const wbm=new THREE.MeshLambertMaterial({color:0x1a8a4a});
+  [[-26,26],[26,-26]].forEach(([za,zb])=>{
+    const m=new THREE.Mesh(new THREE.BoxGeometry(52,0.3,0.3),wbm);m.position.set(0,1.6,(za+zb)/2);scene.add(m);
+  });
+}
+
+function buildBVP(){
+  // Blue Villager Productions — big corner building with logo
+  const bx=-20,bz=-20;
+  const mat=new THREE.MeshLambertMaterial({color:0x0a3a6a}); // deep blue
+  const body=new THREE.Mesh(new THREE.BoxGeometry(10,12,10),mat);
+  body.position.set(bx,6,bz);body.castShadow=true;body.receiveShadow=true;scene.add(body);
+  // trim
+  const trimMat=new THREE.MeshLambertMaterial({color:0x00ccff,emissive:0x002a4a});
+  const trim=new THREE.Mesh(new THREE.BoxGeometry(10.4,0.4,10.4),trimMat);
+  trim.position.set(bx,12.2,bz);scene.add(trim);
+  // roof spire
+  const spire=new THREE.Mesh(new THREE.ConeGeometry(1.2,4,4),trimMat);
+  spire.position.set(bx,15,bz);scene.add(spire);
+  // logo billboard (sprite)
+  const logoTex=TL.load('https://files.catbox.moe/rp5db0.png');
+  logoTex.magFilter=THREE.NearestFilter;
+  const logoMat=new THREE.SpriteMaterial({map:logoTex,transparent:true,alphaTest:0.05});
+  const logo=new THREE.Sprite(logoMat);logo.scale.set(6,3,1);
+  logo.position.set(bx,8,bz+5.1);scene.add(logo);
+  // windows glow
+  for(let wy=1;wy<11;wy+=1.8){
+    for(let wx=-3;wx<=3;wx+=3){
+      const win=new THREE.Mesh(new THREE.BoxGeometry(1.4,0.9,0.05),new THREE.MeshBasicMaterial({color:0x88ddff}));
+      win.position.set(bx+wx,wy,bz+5.05);scene.add(win);
+    }
+  }
+  BUILDINGS.push({x:bx,z:bz,hw:5,hd:5});
+  // sign post
+  addSignPost(bx+5.5,bz,'BVP INC.',0x00ccff);
+}
+
+function buildShopBuilding(){
+  // Emerald Shop — bright green building
+  const sx=20,sz=-20;
+  const smat=new THREE.MeshLambertMaterial({color:0x0a5a2a});
+  const body=new THREE.Mesh(new THREE.BoxGeometry(7,6,7),smat);
+  body.position.set(sx,3,sz);body.castShadow=true;body.receiveShadow=true;scene.add(body);
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(5.5,3,4),
+    new THREE.MeshLambertMaterial({color:0x00ff80,emissive:0x004420}));
+  roof.position.set(sx,7.5,sz);roof.rotation.y=Math.PI/4;scene.add(roof);
+  // sign
+  addSignPost(sx,sz+3.6,'💎 SHOP',0x00ff80);
+  // Blue Villager NPC marker
+  BUILDINGS.push({x:sx,z:sz,hw:3.5,hd:3.5});
+  // store the shop position for interaction
+  window.SHOP_POS={x:sx,z:sz};
+}
+
+function addSignPost(x,z,text,col){
+  const post=new THREE.Mesh(new THREE.BoxGeometry(0.2,2.5,0.2),
+    new THREE.MeshLambertMaterial({color:0x8b6040}));
+  post.position.set(x,1.25,z);scene.add(post);
+}
+
+// ── PARTICLES ─────────────────────────────────────────────────────────────────
 const PARTS=[];
 function spawnParts(pos,col,n=8){
   for(let i=0;i<n;i++){
     const a=Math.random()*Math.PI*2,spd=2+Math.random()*5;
-    const m=new THREE.Mesh(new THREE.SphereGeometry(0.07,4,4),new THREE.MeshBasicMaterial({color:col,transparent:true}));
+    const m=new THREE.Mesh(new THREE.SphereGeometry(0.07,4,4),
+      new THREE.MeshBasicMaterial({color:col,transparent:true}));
     m.position.copy(pos);scene.add(m);
     PARTS.push({m,vx:Math.cos(a)*spd,vy:2+Math.random()*3,vz:Math.sin(a)*spd,life:0.5+Math.random()*0.4});
   }
@@ -211,157 +443,276 @@ function tickParts(dt){
   }
 }
 
-// DROPS
+// ── DROPS ─────────────────────────────────────────────────────────────────────
 const DROPS=[];
 function spawnDrop(pos,val){
-  const m=new THREE.Mesh(new THREE.OctahedronGeometry(0.22),new THREE.MeshLambertMaterial({color:0x00ff80,emissive:0x004420}));
-  m.position.set(pos.x,0.25,pos.z);scene.add(m);DROPS.push({m,val,life:15,t:Math.random()*Math.PI*2});
+  const m=new THREE.Mesh(new THREE.OctahedronGeometry(0.22),
+    new THREE.MeshLambertMaterial({color:0x00ff80,emissive:0x004420}));
+  m.position.set(pos.x,0.25,pos.z);scene.add(m);
+  DROPS.push({m,val,life:18,t:Math.random()*Math.PI*2});
 }
 function tickDrops(dt){
   for(let i=DROPS.length-1;i>=0;i--){
-    const d=DROPS[i];d.life-=dt;d.t+=dt*2;d.m.rotation.y=d.t;d.m.position.y=0.25+Math.sin(d.t)*0.1;
+    const d=DROPS[i];d.life-=dt;d.t+=dt*2;
+    d.m.rotation.y=d.t;d.m.position.y=0.25+Math.sin(d.t)*0.1;
     if(d.life<=0){scene.remove(d.m);DROPS.splice(i,1);}
   }
 }
 
-// PROJECTILES
+// ── PROJECTILES ───────────────────────────────────────────────────────────────
 const PROJS=[];
-function spawnProj(pos,dir,dmg,col=0xdddddd,spd=18){
-  const m=new THREE.Mesh(new THREE.SphereGeometry(0.12,6,6),new THREE.MeshBasicMaterial({color:col}));
-  m.position.copy(pos);scene.add(m);PROJS.push({m,dir:dir.clone().normalize(),spd,dmg,life:3.5});
+function spawnProj(pos,dir,dmg,col=0xdddddd,spd=18,fromPlayer=false){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(fromPlayer?0.18:0.12,6,6),
+    new THREE.MeshBasicMaterial({color:col}));
+  m.position.copy(pos);scene.add(m);
+  PROJS.push({m,dir:dir.clone().normalize(),spd,dmg,life:4,fromPlayer});
 }
 function tickProjs(dt,gs){
   for(let i=PROJS.length-1;i>=0;i--){
     const pr=PROJS[i];pr.life-=dt;pr.m.position.addScaledVector(pr.dir,pr.spd*dt);
     const pp=pr.m.position;
-    if(d2(pp.x,pp.z,gs.player.x,gs.player.z)<0.7&&!gs.player.blind){
-      gs.player.hp-=pr.dmg;pr.life=0;flashDmg();spawnParts(pp,0xff2222,5);
+    if(pr.fromPlayer){
+      // hits enemies
+      let hit=false;
+      gs.enemies.forEach(e=>{
+        if(!e.dead&&!hit&&d2(pp.x,pp.z,e.x,e.z)<0.9){hurtEnemy(gs,e,pr.dmg);hit=true;pr.life=0;spawnParts(pp,0x50ffaa,4);}
+      });
+    } else {
+      if(d2(pp.x,pp.z,gs.player.x,gs.player.z)<0.7){
+        gs.player.hp-=pr.dmg;pr.life=0;flashDmg();spawnParts(pp,0xff2222,4);
+      }
     }
     if(pr.life<=0){scene.remove(pr.m);PROJS.splice(i,1);}
   }
 }
 
-// FANGS
+// ── FANGS ─────────────────────────────────────────────────────────────────────
 const FANGS=[];
 function spawnFangs(from,toward,col=0xff40ff){
   const dx=toward.x-from.x,dz=toward.z-from.z,len=Math.hypot(dx,dz)||1;
-  for(let f=0;f<6;f++){
-    const m=new THREE.Mesh(new THREE.ConeGeometry(0.25,0.8,4),new THREE.MeshBasicMaterial({color:col,transparent:true}));
-    m.position.set(from.x+dx/len*(2+f*1.8),0.4,from.z+dz/len*(2+f*1.8));
-    scene.add(m);FANGS.push({m,life:1.2,dmg:6});
+  for(let f=0;f<5;f++){
+    const m=new THREE.Mesh(new THREE.ConeGeometry(0.22,0.7,4),
+      new THREE.MeshBasicMaterial({color:col,transparent:true}));
+    m.position.set(from.x+dx/len*(2+f*1.6),0.35,from.z+dz/len*(2+f*1.6));
+    scene.add(m);FANGS.push({m,life:1.0,dmg:5});
   }
 }
 function tickFangs(dt,gs){
   for(let i=FANGS.length-1;i>=0;i--){
-    const f=FANGS[i];f.life-=dt;f.m.material.opacity=Math.min(1,f.life/0.4);
-    if(d2(f.m.position.x,f.m.position.z,gs.player.x,gs.player.z)<0.8&&f.life>0.6){gs.player.hp-=f.dmg*dt*1.5;flashDmg();}
+    const f=FANGS[i];f.life-=dt;f.m.material.opacity=Math.min(1,f.life/0.3);
+    if(d2(f.m.position.x,f.m.position.z,gs.player.x,gs.player.z)<0.75&&f.life>0.5)
+      {gs.player.hp-=f.dmg*dt*1.5;flashDmg();}
     if(f.life<=0){scene.remove(f.m);FANGS.splice(i,1);}
   }
 }
 
-// KILL FEED
+// ── KILL FEED ─────────────────────────────────────────────────────────────────
 const KILLS=[];
 function addKill(msg){
   KILLS.push({msg,life:4});
-  document.getElementById('kill-feed').innerHTML=KILLS.map(k=>k.msg).slice(-5).join('<br>');
+  document.getElementById('kill-feed').innerHTML=KILLS.slice(-5).map(k=>k.msg).join('<br>');
 }
 function tickKills(dt){
   for(let i=KILLS.length-1;i>=0;i--){KILLS[i].life-=dt;if(KILLS[i].life<=0)KILLS.splice(i,1);}
-  document.getElementById('kill-feed').innerHTML=KILLS.map(k=>k.msg).slice(-5).join('<br>');
+  document.getElementById('kill-feed').innerHTML=KILLS.slice(-5).map(k=>k.msg).join('<br>');
 }
 
-// WAVE GENERATION — 420 waves, ~1 min each = 7 hours
-// Difficulty scales continuously. Boss waves every 60. Arch-Illager at 420.
-const ENEMY_TYPES=['pillager','vindicator','evoker','illusioner','ravager','silverCube'];
-
-function generateWave(wave){
-  const w=wave;
-  const tier=Math.floor((w-1)/60); // 0-6, increases every 60 waves
-  const progress=(w-1)/419;        // 0→1 over full run
-
-  // Base enemy counts — grow with wave number
-  const def=[];
-
-  // Pillagers: always present, scale up hard
-  const nPill=Math.min(3+Math.floor(w*0.18),30);
-  def.push({t:'pillager',n:nPill});
-
-  // Vindicators: from wave 5
-  if(w>=5){const n=Math.min(Math.floor((w-4)*0.12)+1,18);def.push({t:'vindicator',n});}
-
-  // Evokers: from wave 10
-  if(w>=10){const n=Math.min(Math.floor((w-9)*0.06)+1,10);def.push({t:'evoker',n});}
-
-  // Illusioners: from wave 20
-  if(w>=20){const n=Math.min(Math.floor((w-19)*0.05)+1,8);def.push({t:'illusioner',n});}
-
-  // Ravagers: from wave 35
-  if(w>=35){const n=Math.min(Math.floor((w-34)*0.04)+1,6);def.push({t:'ravager',n});}
-
-  // Sulver Cubes: from wave 15, every few waves
-  if(w>=15&&(w-15)%8===0){def.push({t:'silverCube',n:Math.min(1+Math.floor(tier/2),4)});}
-
-  // BOSS WAVES every 60 — Arch-Illager (with growing HP/count)
-  if(w%60===0){
-    const extra=Math.floor(w/60); // 1,2,3,4,5,6,7
-    def.push({t:'archIllager',n:extra});
-    // strip out some fodder to make room
-    const pi=def.findIndex(d=>d.t==='pillager');
-    if(pi>=0)def[pi].n=Math.max(2,def[pi].n-6);
+// ── FRIENDLY WISPS ────────────────────────────────────────────────────────────
+const FW=[];
+function spawnFriendlyWisp(gs,x,z){
+  const grp=new THREE.Group();
+  const s=makeSprite('wisp',1.3,0.9);s.position.y=0.65;grp.add(s);
+  const glow=new THREE.Mesh(new THREE.SphereGeometry(0.4,8,8),
+    new THREE.MeshBasicMaterial({color:0x00ffff,transparent:true,opacity:0.22}));
+  glow.position.y=0.65;grp.add(glow);
+  grp.position.set(x,0.8,z);scene.add(grp);
+  FW.push({grp,x,z,life:35,t:Math.random()*Math.PI*2,atkCd:0,dead:false});
+}
+function tickFW(dt,gs){
+  for(let i=FW.length-1;i>=0;i--){
+    const w=FW[i];w.life-=dt;w.t+=dt*3;w.atkCd-=dt;
+    if(w.life<=0||w.dead){scene.remove(w.grp);FW.splice(i,1);continue;}
+    const tgt=nearestEnemyFiltered(gs,w.x,w.z,22,['silverCube']);
+    if(tgt){
+      const dx=tgt.x-w.x,dz=tgt.z-w.z,dd=d2(tgt.x,tgt.z,w.x,w.z)||1;
+      w.x+=dx/dd*8*dt;w.z+=dz/dd*8*dt;
+      if(dd<1.1&&w.atkCd<=0){w.atkCd=0.5;hurtEnemy(gs,tgt,10);spawnParts(new THREE.Vector3(w.x,0.8,w.z),0x00ffff,3);}
+    }
+    w.grp.position.set(w.x,0.8+Math.sin(w.t)*0.28,w.z);fc(w.grp,w.x,w.z);
   }
+}
 
-  // FINAL WAVE 420
+// ── INVENTORY & SHOP ──────────────────────────────────────────────────────────
+const INVENTORY=[
+  {id:'sword',name:'Sword',icon:'🗡️',desc:'Emerald sword (permanent)',count:1,permanent:true},
+  null,null,null,null
+];
+let selectedSlot=0;
+let shopOpen=false;
+
+const SHOP_CATALOG=[
+  {id:'pc',name:'PC Throw',icon:'💻',desc:'Throw a PC at Pillagers — deals 20 dmg in an arc. 3 uses.',price:8,maxStack:3},
+  {id:'craftTable',name:'Crafting Table',icon:'🪚',desc:'Doubles your sword damage for 30s.',price:12,maxStack:1},
+  {id:'shield',name:'Emerald Shield',icon:'🛡️',desc:'Absorbs next 5 hits completely.',price:15,maxStack:1},
+  {id:'speedPotion',name:'Speed Potion',icon:'⚡',desc:'Move 2x faster for 20s.',price:10,maxStack:2},
+  {id:'healthPotion',name:'Health Potion',icon:'❤️',desc:'Restore 10 HP instantly.',price:6,maxStack:5},
+  {id:'allayBell',name:'Allay Bell',icon:'🔔',desc:'Summons 2 extra Allays for this wave.',price:18,maxStack:1},
+  {id:'emeraldBomb',name:'Emerald Bomb',icon:'💣',desc:'Throw to deal 30 AoE damage in radius 5.',price:20,maxStack:3},
+];
+
+function openShop(gs){
+  if(shopOpen)return;
+  shopOpen=true;
+  document.getElementById('shop').style.display='flex';
+  document.getElementById('shop-balance').textContent=`💎 Emeralds: ${gs.emeralds}`;
+  const el=document.getElementById('shop-items');el.innerHTML='';
+  SHOP_CATALOG.forEach(item=>{
+    const affordable=gs.emeralds>=item.price;
+    const div=document.createElement('div');div.className='shop-item';
+    div.innerHTML=`<div class="shop-item-icon">${item.icon}</div>
+      <div class="shop-item-info"><div class="shop-item-name">${item.name}</div>
+      <div class="shop-item-desc">${item.desc}</div></div>
+      <div class="shop-item-price ${affordable?'':'unaffordable'}">💎${item.price}</div>`;
+    if(affordable)div.onclick=()=>buyItem(item,gs);
+    else div.style.opacity='0.45';
+    el.appendChild(div);
+  });
+  // pause the game
+  if(GS)GS._shopPaused=true;
+  if(document.pointerLockElement)document.exitPointerLock();
+}
+function closeShop(){
+  shopOpen=false;document.getElementById('shop').style.display='none';
+  if(GS)GS._shopPaused=false;
+  document.getElementById('c').requestPointerLock();
+}
+function buyItem(item,gs){
+  if(gs.emeralds<item.price)return;
+  gs.emeralds-=item.price;
+  // add to first empty inventory slot
+  const slot=INVENTORY.findIndex((s,i)=>i>0&&!s);
+  if(slot===-1){addKill('⚠ Inventory full!');return;}
+  const existing=INVENTORY.findIndex(s=>s&&s.id===item.id);
+  if(existing>0&&INVENTORY[existing].count<item.maxStack){
+    INVENTORY[existing].count++;
+  } else if(slot!==-1){
+    INVENTORY[slot]={...item,count:1};
+  }
+  renderInventory();
+  document.getElementById('shop-balance').textContent=`💎 Emeralds: ${gs.emeralds}`;
+  addKill(`🛒 Bought ${item.name}!`);
+  openShop(gs); // refresh
+}
+function renderInventory(){
+  INVENTORY.forEach((item,i)=>{
+    const el=document.getElementById(`slot-${i}`);if(!el)return;
+    if(!item){el.className='inv-slot empty';el.innerHTML='';return;}
+    el.className='inv-slot'+(i===selectedSlot?' active':'');
+    el.innerHTML=`${item.icon}<br>${item.count>1?item.count:''}`;
+  });
+}
+function selectSlot(i){selectedSlot=i;renderInventory();}
+function useItem(gs){
+  const item=INVENTORY[selectedSlot];if(!item||item.permanent)return;
+  const p=gs.player;
+  const pos=new THREE.Vector3(p.x,1,p.z);
+  const fwd=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+  if(item.id==='pc'||item.id==='emeraldBomb'){
+    spawnProj(pos,fwd,item.id==='pc'?20:30,item.id==='pc'?0x4488ff:0xffaa00,14,true);
+    item.count--;if(item.count<=0)INVENTORY[selectedSlot]=null;
+    renderInventory();
+  } else if(item.id==='craftTable'){
+    gs.player.swordBoost=30;addKill('🪚 Crafting Table: sword damage x2 for 30s!');
+    INVENTORY[selectedSlot]=null;renderInventory();
+  } else if(item.id==='shield'){
+    gs.player.shieldHits=5;addKill('🛡️ Emerald Shield: 5 hits blocked!');
+    INVENTORY[selectedSlot]=null;renderInventory();
+  } else if(item.id==='speedPotion'){
+    gs.player.speedBoost=20;addKill('⚡ Speed Potion: 2x speed for 20s!');
+    item.count--;if(item.count<=0)INVENTORY[selectedSlot]=null;renderInventory();
+  } else if(item.id==='healthPotion'){
+    gs.player.hp=Math.min(gs.player.maxHp,gs.player.hp+10);addKill('❤️ +10 HP!');
+    item.count--;if(item.count<=0)INVENTORY[selectedSlot]=null;renderInventory();
+  } else if(item.id==='allayBell'){
+    for(let i=0;i<2;i++){const a=Math.random()*Math.PI*2;
+      const ax=p.x+Math.cos(a)*3,az=p.z+Math.sin(a)*3;
+      spawnTempAllay(gs,ax,az);}
+    addKill('🔔 2 extra Allays summoned!');
+    INVENTORY[selectedSlot]=null;renderInventory();
+  }
+}
+function spawnTempAllay(gs,x,z){
+  const grp=new THREE.Group();
+  const s=makeSprite('allay',1.4,1.1);s.position.y=0.7;grp.add(s);
+  grp.position.set(x,0,z);scene.add(grp);
+  gs.allays.push({grp,x,z,hp:10,maxHp:10,r:0.4,phase:'orbit',
+    orbitAng:Math.random()*Math.PI*2,orbitR:3.5,orbitSpd:1.8,
+    attackCooldown:0,dartTarget:null,dartVx:0,dartVz:0,dartTimer:0,
+    respawnTimer:-1,dead:false,temp:true,tempLife:60});
+}
+
+// ── WAVE GENERATOR ─────────────────────────────────────────────────────────────
+function generateWave(w){
+  // Hard cap on total enemies per wave to avoid freeze — staggered spawning handles the rest
+  const def=[];
+  const tier=Math.floor((w-1)/60);
+  def.push({t:'pillager',n:clamp(3+Math.floor(w*0.08),3,14)});
+  if(w>=5) def.push({t:'vindicator',n:clamp(Math.floor((w-4)*0.07)+1,1,10)});
+  if(w>=10)def.push({t:'evoker',    n:clamp(Math.floor((w-9)*0.04)+1,1,6)});
+  if(w>=20)def.push({t:'illusioner',n:clamp(Math.floor((w-19)*0.03)+1,1,5)});
+  if(w>=35)def.push({t:'ravager',   n:clamp(Math.floor((w-34)*0.025)+1,1,4)});
+  if(w>=15&&(w-15)%8===0)def.push({t:'silverCube',n:clamp(1+Math.floor(tier/2),1,3)});
+  if(w%60===0){
+    const n=Math.floor(w/60);def.push({t:'archIllager',n:Math.min(n,4)});
+    const pi=def.findIndex(d=>d.t==='pillager');if(pi>=0)def[pi].n=Math.max(2,def[pi].n-4);
+  }
   if(w===420){
     def.length=0;
-    def.push(
-      {t:'archIllager',n:7},
-      {t:'pillager',n:20},
-      {t:'vindicator',n:12},
-      {t:'evoker',n:8},
-      {t:'illusioner',n:6},
-      {t:'ravager',n:5},
-      {t:'silverCube',n:4},
-    );
+    def.push({t:'archIllager',n:4},{t:'pillager',n:12},{t:'vindicator',n:8},
+              {t:'evoker',n:5},{t:'illusioner',n:4},{t:'ravager',n:3},{t:'silverCube',n:2});
   }
-
   return def;
 }
 
+// ── ENEMY STATS ───────────────────────────────────────────────────────────────
 function ESTAT(t){
   const S={
-    pillager:    {hp:10, spd:3.5,r:0.6, dmg:4, range:14,bw:1.3,h:2.2},
-    vindicator:  {hp:24, spd:4.5,r:0.65,dmg:9, range:1.2,bw:1.5,h:2.6},
-    evoker:      {hp:12, spd:2.5,r:0.65,dmg:0, range:18, bw:1.4,h:2.4},
-    ravager:     {hp:100,spd:3.0,r:1.4, dmg:18,range:1.8,bw:2.2,h:3.2},
-    silverCube:  {hp:40, spd:1.5,r:1.0, dmg:0, range:0,  bw:1.8,h:2.0},
-    vex:         {hp:8,  spd:6.0,r:0.4, dmg:5, range:1.0,bw:0.9,h:1.4},
-    evokerVillager:{hp:30,spd:2.0,r:0.7,dmg:0,range:0,   bw:1.6,h:2.3},
-    wisp:        {hp:30, spd:8.0,r:0.4, dmg:12,range:1.0,bw:1.0,h:1.4},
-    illusioner:  {hp:20, spd:3.0,r:0.65,dmg:5,range:18,  bw:1.5,h:2.4},
-    archIllager: {hp:500,spd:2.8,r:1.2, dmg:15,range:0,  bw:3.0,h:3.8},
+    pillager:    {hp:10, spd:3.2,r:0.6, dmg:4, range:13,bw:1.3,h:2.2},
+    vindicator:  {hp:24, spd:4.0,r:0.65,dmg:9, range:1.2,bw:1.5,h:2.6},
+    evoker:      {hp:12, spd:2.2,r:0.65,dmg:0, range:16, bw:1.4,h:2.4},
+    ravager:     {hp:80, spd:2.8,r:1.3, dmg:16,range:1.8,bw:2.0,h:3.2},
+    silverCube:  {hp:40, spd:1.2,r:1.0, dmg:0, range:0,  bw:1.8,h:2.0},
+    vex:         {hp:8,  spd:5.5,r:0.4, dmg:4, range:1.0,bw:0.8,h:1.4},
+    wisp:        {hp:25, spd:7.0,r:0.4, dmg:10,range:1.0,bw:0.9,h:1.4},
+    illusioner:  {hp:20, spd:2.8,r:0.65,dmg:5, range:16, bw:1.5,h:2.4},
+    archIllager: {hp:400,spd:2.5,r:1.2, dmg:14,range:0,  bw:2.8,h:3.8},
   };
   return S[t]||{hp:10,spd:3,r:0.6,dmg:5,range:8,bw:1.4,h:2.0};
 }
 
-// GAME STATE
+// ── GAME STATE ────────────────────────────────────────────────────────────────
 let GS=null,yaw=0,pitch=0,mouseAtk=false,animId=null;
 const KEYS={};
 
 function freshGS(){
-  return {phase:'prep',wave:1,maxWaves:420,prepTimer:10,emeralds:0,
-    player:{x:0,z:0,hp:20,maxHp:20,invis:true,invisTimer:0,attackCooldown:0,speed:7,blind:false,blindTimer:0},
-    allays:[],golem:null,kingVillager:null,evokerVillager:null,
-    villagers:[],babyVillagers:[],enemies:[],lastTime:0};
+  return {phase:'prep',wave:1,prepTimer:10,emeralds:0,_shopPaused:false,
+    player:{x:0,z:0,hp:20,maxHp:20,invis:true,invisTimer:0,attackCooldown:0,
+            speed:7,blind:false,blindTimer:0,shieldHits:0,speedBoost:0,swordBoost:0},
+    allays:[],golem:null,kingVillager:null,evokerVillager:null,blueVillager:null,
+    villagers:[],babyVillagers:[],enemies:[],
+    spawnQueue:[],spawnTimer:0,  // ← staggered spawn queue (freeze fix)
+    lastTime:0};
 }
 
-// SPAWN FRIENDLIES
+// ── SPAWN FRIENDLIES ──────────────────────────────────────────────────────────
 function spawnVillagers(gs){
   for(let i=0;i<5;i++){
     const ang=i/5*Math.PI*2,r=6+Math.random()*2;
     const grp=makeEnt('villager',2.1,10,1.2);
     const ex=Math.cos(ang)*r,ez=Math.sin(ang)*r;
     grp.position.set(ex,0,ez);scene.add(grp);
-    gs.villagers.push({grp,x:ex,z:ez,hp:10,maxHp:10,r:0.5,wander:Math.random()*Math.PI*2,wanderT:2+Math.random()*2,dead:false});
+    gs.villagers.push({grp,x:ex,z:ez,hp:10,maxHp:10,r:0.5,
+      wander:Math.random()*Math.PI*2,wanderT:2+Math.random()*2,dead:false});
   }
 }
 function spawnBabyVillagers(gs){
@@ -371,14 +722,16 @@ function spawnBabyVillagers(gs){
     const ex=Math.cos(ang)*r,ez=Math.sin(ang)*r;
     grp.position.set(ex,0,ez);scene.add(grp);
     gs.babyVillagers.push({grp,x:ex,z:ez,hp:6,maxHp:6,r:0.35,
-      wander:Math.random()*Math.PI*2,wanderT:0.8+Math.random()*1,panicTimer:0,panicDir:0,bobT:Math.random()*Math.PI*2,dead:false});
+      wander:Math.random()*Math.PI*2,wanderT:0.8+Math.random()*1,
+      panicTimer:0,panicDir:0,bobT:Math.random()*Math.PI*2,dead:false});
   }
 }
 function spawnAllays(gs){
   for(let i=0;i<3;i++){
     const grp=new THREE.Group();
     const s=makeSprite('allay',1.4,1.1);s.position.y=0.7;grp.add(s);
-    const glow=new THREE.Mesh(new THREE.SphereGeometry(0.55,8,8),new THREE.MeshBasicMaterial({color:0x80b0ff,transparent:true,opacity:0.2}));
+    const glow=new THREE.Mesh(new THREE.SphereGeometry(0.5,8,8),
+      new THREE.MeshBasicMaterial({color:0x80b0ff,transparent:true,opacity:0.18}));
     glow.position.y=0.7;grp.add(glow);
     grp.position.set(Math.cos(i/3*Math.PI*2)*3,0,Math.sin(i/3*Math.PI*2)*3);scene.add(grp);
     gs.allays.push({grp,x:grp.position.x,z:grp.position.z,hp:10,maxHp:10,r:0.4,phase:'orbit',
@@ -391,286 +744,355 @@ function spawnGolem(gs){
   gs.golem={grp,x:-5,z:-3,hp:100,maxHp:100,spd:2.2,r:1.1,attackCooldown:0,dead:false};
 }
 function spawnKingVillager(gs){
-  const grp=makeEnt('kingVillager',2.6,200,2.0);grp.position.set(3,0,3);scene.add(grp);
-  gs.kingVillager={grp,x:3,z:3,hp:200,maxHp:200,r:0.7,summonCooldown:14,dead:false};
+  const grp=makeEnt('kingVillager',2.6,200,2.0);grp.position.set(4,0,3);scene.add(grp);
+  gs.kingVillager={grp,x:4,z:3,hp:200,maxHp:200,r:0.7,summonCooldown:16,dead:false};
   document.getElementById('king-lbl').style.display='block';
-  addKill('👑 King Villager the I (age 215) is here to help!');
+  addKill('👑 King Villager the I is here to help!');
 }
 function spawnEvokerVillager(gs){
-  // Friendly Evoker Villager — summons Wisps to fight for you
-  const grp=makeEnt('evokerVillager',2.3,80,1.8);grp.position.set(-3,0,4);scene.add(grp);
-  gs.evokerVillager={grp,x:-3,z:4,hp:80,maxHp:80,r:0.6,wispCooldown:10,wander:0,wanderT:3,dead:false};
-  addKill('👤 Evoker Villager joins to protect the village!');
+  const grp=makeEnt('evokerVillager',2.3,80,1.8);grp.position.set(-4,0,4);scene.add(grp);
+  gs.evokerVillager={grp,x:-4,z:4,hp:80,maxHp:80,r:0.6,wispCooldown:12,wander:0,wanderT:3,dead:false};
+  addKill('👤 Evoker Villager joins to protect!');
+}
+function spawnBlueVillager(gs){
+  // The shopkeeper — stands near the shop building
+  const grp=makeEnt('blueVillager',2.2,999,0);grp.position.set(18,0,-17);scene.add(grp);
+  gs.blueVillager={grp,x:18,z:-17,hp:999,r:0.7,bobT:0};
+  addKill('🔵 Blue Villager is open for business! (E = shop)');
 }
 
-// FRIENDLY WISPS (spawned by Evoker Villager)
-const FRIENDLY_WISPS=[];
-function spawnFriendlyWisp(gs,x,z){
-  const grp=new THREE.Group();
-  const s=makeSprite('wisp',1.4,1.0);s.position.y=0.7;grp.add(s);
-  // tint to make friendly wisps distinguishable (cyan glow)
-  const glow=new THREE.Mesh(new THREE.SphereGeometry(0.45,8,8),new THREE.MeshBasicMaterial({color:0x00ffff,transparent:true,opacity:0.25}));
-  glow.position.y=0.7;grp.add(glow);
-  grp.position.set(x,0.8,z);scene.add(grp);
-  FRIENDLY_WISPS.push({grp,x,z,hp:30,life:30,t:Math.random()*Math.PI*2,attackCooldown:0,dead:false});
+// ── STAGGERED ENEMY SPAWN (freeze fix) ────────────────────────────────────────
+// Instead of spawning all enemies at once, queue them and trickle 2 per frame
+function queueWave(gs){
+  const def=generateWave(gs.wave);
+  const hpM=1+Math.floor((gs.wave-1)/20)*0.12;
+  const sM=1+Math.floor((gs.wave-1)/40)*0.07;
+  const dM=1+Math.floor((gs.wave-1)/30)*0.08;
+  gs.spawnQueue=[];
+  def.forEach(({t,n})=>{
+    for(let i=0;i<n;i++){
+      gs.spawnQueue.push({t,hpM,sM,dM});
+    }
+  });
+  // shuffle so types mix
+  for(let i=gs.spawnQueue.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [gs.spawnQueue[i],gs.spawnQueue[j]]=[gs.spawnQueue[j],gs.spawnQueue[i]];
+  }
+  gs.spawnTimer=0;
 }
-function tickFriendlyWisps(dt,gs){
-  for(let i=FRIENDLY_WISPS.length-1;i>=0;i--){
-    const w=FRIENDLY_WISPS[i];w.life-=dt;w.t+=dt*3;w.attackCooldown-=dt;
-    if(w.life<=0||w.dead){scene.remove(w.grp);FRIENDLY_WISPS.splice(i,1);continue;}
-    // find nearest enemy to attack
-    const tgt=nearestEnemy(gs,w.x,w.z,20);
-    if(tgt){const dx=tgt.x-w.x,dz=tgt.z-w.z,dd=d2(tgt.x,tgt.z,w.x,w.z)||1;w.x+=dx/dd*8*dt;w.z+=dz/dd*8*dt;
-      if(dd<1.2&&w.attackCooldown<=0){w.attackCooldown=0.5;hurtEnemy(gs,tgt,12);spawnParts(new THREE.Vector3(w.x,0.8,w.z),0x00ffff,3);}}
-    w.grp.position.set(w.x,0.8+Math.sin(w.t)*0.3,w.z);fc(w.grp,w.x,w.z);
+
+function tickSpawnQueue(dt,gs){
+  if(!gs.spawnQueue.length)return;
+  gs.spawnTimer-=dt;
+  // spawn up to 2 enemies per 0.15s — smooth trickle
+  const RATE=0.15;
+  if(gs.spawnTimer<=0){
+    gs.spawnTimer=RATE;
+    const batch=gs.spawnQueue.splice(0,2);
+    batch.forEach(({t,hpM,sM,dM})=>{
+      const p=edgePos();
+      const e=spawnEnemy(gs,t,p.x,p.z);
+      e.hp=Math.round(e.hp*hpM);e.maxHp=e.hp;
+      if(e.grp._bar)e.grp._bar._max=e.hp;
+      e.spd*=sM;e.dmg=Math.round(e.dmg*dM);
+    });
   }
 }
 
-// SPAWN ENEMY
 function edgePos(){
-  const e=[()=>({x:(Math.random()-0.5)*42,z:-27}),()=>({x:(Math.random()-0.5)*42,z:27}),
-           ()=>({x:-27,z:(Math.random()-0.5)*42}),()=>({x:27,z:(Math.random()-0.5)*42})];
+  const e=[()=>({x:(Math.random()-0.5)*44,z:-28}),()=>({x:(Math.random()-0.5)*44,z:28}),
+           ()=>({x:-28,z:(Math.random()-0.5)*44}),()=>({x:28,z:(Math.random()-0.5)*44})];
   return e[Math.floor(Math.random()*4)]();
 }
 function spawnEnemy(gs,t,x,z){
   const st=ESTAT(t);
   const grp=makeEnt(t,st.h,st.hp,st.bw);grp.position.set(x,0,z);scene.add(grp);
-  gs.enemies.push({grp,x,z,type:t,...st,
+  const e={grp,x,z,type:t,...st,
     attackCooldown:Math.random()*1.5,
     spellCooldown:t==='evoker'?4+Math.random()*2:0,
-    summonCooldown:(t==='evokerVillager'||t==='archIllager')?8:0,
+    summonCooldown:t==='archIllager'?8:0,
     blindCooldown:t==='illusioner'?15+Math.random()*5:0,
-    wispCooldown:t==='evokerVillager'?5:0,
     absorbedVexes:t==='silverCube'?0:undefined,
-    dead:false});
-}
-function spawnWave(gs){
-  const def=generateWave(gs.wave);
-  // Scale enemy HP and speed gently with wave progression
-  const hpMult=1+Math.floor((gs.wave-1)/20)*0.15;   // +15% HP every 20 waves
-  const spdMult=1+Math.floor((gs.wave-1)/40)*0.08;  // +8% speed every 40 waves
-  def.forEach(({t,n})=>{
-    for(let i=0;i<n;i++){
-      const p=edgePos();
-      const e=spawnEnemy(gs,t,p.x,p.z);
-      // scale stats
-      e.hp=Math.round(e.hp*hpMult);
-      e.maxHp=e.hp;
-      if(e.grp._bar)e.grp._bar._max=e.hp;
-      e.spd=e.spd*spdMult;
-      e.dmg=Math.round(e.dmg*(1+Math.floor((gs.wave-1)/30)*0.1));
-    }
-  });
+    dead:false};
+  gs.enemies.push(e);return e;
 }
 
-// MAIN TICK
+// ── MAIN TICK ─────────────────────────────────────────────────────────────────
 function tick(dt){
   const gs=GS;
+  if(gs._shopPaused)return;
+
   if(gs.phase==='prep'){
-    gs.prepTimer-=dt;if(gs.prepTimer<=0){gs.phase='wave';spawnWave(gs);showBanner(gs);}
+    gs.prepTimer-=dt;
+    if(gs.prepTimer<=0){gs.phase='wave';queueWave(gs);showBanner(gs);}
   } else if(gs.phase==='wave'){
+    tickSpawnQueue(dt,gs);  // ← trickle enemies in — no freeze
     tickEnemies(dt,gs);
-    if(gs.enemies.filter(e=>!e.dead).length===0){
+    const alive=gs.enemies.filter(e=>!e.dead).length;
+    if(alive===0&&gs.spawnQueue.length===0){
       if(gs.wave>=420){gs.phase='win';showEnd(true,gs);return;}
       gs.wave++;gs.phase='prep';gs.prepTimer=10;
     }
   }
-  tickPlayer(dt,gs);tickAllays(dt,gs);tickGolem(dt,gs);
-  tickKing(dt,gs);tickEvokerVillagerFriendly(dt,gs);tickVillagers(dt,gs);tickBabies(dt,gs);
-  tickProjs(dt,gs);tickFangs(dt,gs);tickDrops(dt);tickParts(dt);tickKills(dt);tickFriendlyWisps(dt,gs);
-  // player collects drops
+
+  tickPlayer(dt,gs);
+  tickAllays(dt,gs);
+  tickGolem(dt,gs);
+  tickKing(dt,gs);
+  tickEvokerVillagerFriendly(dt,gs);
+  tickBlueVillager(dt,gs);
+  tickVillagers(dt,gs);
+  tickBabies(dt,gs);
+  tickProjs(dt,gs);
+  tickFangs(dt,gs);
+  tickDrops(dt);
+  tickParts(dt);
+  tickKills(dt);
+  tickFW(dt,gs);
+
+  // collect drops
   for(let i=DROPS.length-1;i>=0;i--){
-    const d=DROPS[i];if(d2(d.m.position.x,d.m.position.z,gs.player.x,gs.player.z)<1.3){
-      gs.emeralds+=d.val;scene.remove(d.m);DROPS.splice(i,1);spawnParts(d.m.position,0x00ff80,4);
+    const d=DROPS[i];
+    if(d2(d.m.position.x,d.m.position.z,gs.player.x,gs.player.z)<1.2){
+      gs.emeralds+=d.val;scene.remove(d.m);DROPS.splice(i,1);
+      spawnParts(d.m.position,0x00ff80,3);
     }
   }
+
   tickHUD(gs);
   if(gs.player.hp<=0&&gs.phase!=='gameover'&&gs.phase!=='win'){gs.phase='gameover';showEnd(false,gs);}
   const liveV=gs.villagers.filter(v=>!v.dead).length+gs.babyVillagers.filter(b=>!b.dead).length;
-  if(liveV===0&&gs.phase==='wave'){gs.phase='gameover';showEnd(false,gs);}
+  if(liveV===0&&gs.phase==='wave'&&gs.spawnQueue.length===0&&gs.enemies.filter(e=>!e.dead).length>0)
+    {gs.phase='gameover';showEnd(false,gs);}
 }
 
-// PLAYER
+// ── PLAYER ────────────────────────────────────────────────────────────────────
 function tickPlayer(dt,gs){
   const p=gs.player;
+  // buff timers
+  if(p.swordBoost>0)p.swordBoost-=dt;
+  if(p.speedBoost>0)p.speedBoost-=dt;
+
+  const spd=p.speed*(p.speedBoost>0?2:1);
   const fwd=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
   const rgt=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
   let mx=0,mz=0;
-  if(KEYS['w']||KEYS['W']||KEYS['ArrowUp']){mx+=fwd.x;mz+=fwd.z;}
-  if(KEYS['s']||KEYS['S']||KEYS['ArrowDown']){mx-=fwd.x;mz-=fwd.z;}
-  if(KEYS['a']||KEYS['A']||KEYS['ArrowLeft']){mx-=rgt.x;mz-=rgt.z;}
-  if(KEYS['d']||KEYS['D']||KEYS['ArrowRight']){mx+=rgt.x;mz+=rgt.z;}
+  if(KEYS['w']||KEYS['W']||KEYS['ArrowUp'])   {mx+=fwd.x;mz+=fwd.z;}
+  if(KEYS['s']||KEYS['S']||KEYS['ArrowDown'])  {mx-=fwd.x;mz-=fwd.z;}
+  if(KEYS['a']||KEYS['A']||KEYS['ArrowLeft'])  {mx-=rgt.x;mz-=rgt.z;}
+  if(KEYS['d']||KEYS['D']||KEYS['ArrowRight']) {mx+=rgt.x;mz+=rgt.z;}
   const mag=Math.hypot(mx,mz)||1;
-  if(mx||mz){p.x+=mx/mag*p.speed*dt;p.z+=mz/mag*p.speed*dt;}
-  p.x=clamp(p.x,-19,19);p.z=clamp(p.z,-19,19);
+  if(mx||mz){p.x+=mx/mag*spd*dt;p.z+=mz/mag*spd*dt;}
+  p.x=clamp(p.x,-24,24);p.z=clamp(p.z,-24,24);
   BUILDINGS.forEach(b=>{
     const ox=p.x-b.x,oz=p.z-b.z;
-    if(Math.abs(ox)<b.hw+0.5&&Math.abs(oz)<b.hd+0.5){
-      Math.abs(ox)>Math.abs(oz)?p.x=b.x+(b.hw+0.5)*Math.sign(ox):p.z=b.z+(b.hd+0.5)*Math.sign(oz);
+    if(Math.abs(ox)<b.hw+0.6&&Math.abs(oz)<b.hd+0.6){
+      Math.abs(ox)>Math.abs(oz)?p.x=b.x+(b.hw+0.6)*Math.sign(ox):p.z=b.z+(b.hd+0.6)*Math.sign(oz);
     }
   });
-  camera.position.set(p.x,1.7,p.z);camera.rotation.order='YXZ';camera.rotation.y=yaw;camera.rotation.x=pitch;
+  camera.position.set(p.x,1.7,p.z);
+  camera.rotation.order='YXZ';camera.rotation.y=yaw;camera.rotation.x=pitch;
+
   if(p.invisTimer>0){p.invisTimer-=dt;if(p.invisTimer<=0)p.invis=true;}
   document.getElementById('invis-overlay').style.display=p.invis?'block':'none';
-  if(p.blind){
-    p.blindTimer-=dt;
-    if(p.blindTimer<=0){p.blind=false;document.getElementById('blind-overlay').style.background='rgba(0,0,0,0)';document.getElementById('blind-txt').style.display='none';}
-  }
+
+  if(p.blind){p.blindTimer-=dt;
+    if(p.blindTimer<=0){p.blind=false;
+      document.getElementById('blind-overlay').style.background='rgba(0,0,0,0)';
+      document.getElementById('blind-txt').style.display='none';}}
+
   p.attackCooldown-=dt;
   const wantAtk=KEYS[' ']||KEYS['Enter']||mouseAtk;mouseAtk=false;
   if(wantAtk&&p.attackCooldown<=0){
     p.attackCooldown=0.6;p.invis=false;p.invisTimer=2;
+    const dmgMult=p.swordBoost>0?2:1;
     const ad=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
     gs.enemies.forEach(e=>{
       if(e.dead)return;
       const dx=e.x-p.x,dz=e.z-p.z,dd=d2(e.x,e.z,p.x,p.z);
-      if(dd<3.8&&(dx/dd)*ad.x+(dz/dd)*ad.z>0.25)hurtEnemy(gs,e,7);
+      if(dd<3.8&&(dx/dd)*ad.x+(dz/dd)*ad.z>0.22)hurtEnemy(gs,e,7*dmgMult);
     });
-    spawnParts(new THREE.Vector3(p.x+ad.x*2,1,p.z+ad.z*2),0x50ffaa,6);
+    spawnParts(new THREE.Vector3(p.x+ad.x*2,1,p.z+ad.z*2),0x50ffaa,5);
   }
+
+  // Q = use selected item
+  if(KEYS['q']||KEYS['Q']){KEYS['q']=KEYS['Q']=false;useItem(gs);}
+  // E = open shop if near Blue Villager
+  if(KEYS['e']||KEYS['E']){
+    KEYS['e']=KEYS['E']=false;
+    const bv=gs.blueVillager;
+    if(bv&&!bv.dead&&d2(p.x,p.z,bv.x,bv.z)<5)openShop(gs);
+  }
+  // number keys 1-5 for inventory
+  for(let k=1;k<=5;k++){if(KEYS[String(k)]){KEYS[String(k)]=false;selectSlot(k-1);}}
 }
 
-// ALLAYS
+// ── ALLAYS ────────────────────────────────────────────────────────────────────
 function tickAllays(dt,gs){
   const p=gs.player;
-  gs.allays.forEach(a=>{
-    if(a.dead){a.respawnTimer-=dt;if(a.respawnTimer<=0){a.dead=false;a.hp=a.maxHp;a.phase='orbit';a.grp.visible=true;}return;}
+  for(let ai=gs.allays.length-1;ai>=0;ai--){
+    const a=gs.allays[ai];
+    if(a.temp){a.tempLife-=dt;if(a.tempLife<=0){a.dead=true;}}
+    if(a.dead){
+      a.respawnTimer-=dt;
+      if(a.respawnTimer<=0&&!a.temp){a.dead=false;a.hp=a.maxHp;a.phase='orbit';a.grp.visible=true;}
+      else if(a.temp){scene.remove(a.grp);gs.allays.splice(ai,1);}
+      continue;
+    }
     a.attackCooldown-=dt;
     if(a.phase==='orbit'){
       a.orbitAng+=a.orbitSpd*dt;
       const tx=p.x+Math.cos(a.orbitAng)*a.orbitR,tz=p.z+Math.sin(a.orbitAng)*a.orbitR;
       a.x+=(tx-a.x)*5*dt;a.z+=(tz-a.z)*5*dt;
       if(a.attackCooldown<=0){
-        // Allays only target actual raid enemies — not the Sulver Cube or Evoker Villager (friendlies)
-        const tgt=nearestEnemyFiltered(gs,a.x,a.z,14,['silverCube','evokerVillager']);
-        if(tgt){a.phase='dart';a.dartTarget=tgt;const dx=tgt.x-a.x,dz=tgt.z-a.z,dd=d2(tgt.x,tgt.z,a.x,a.z)||1;a.dartVx=dx/dd*13;a.dartVz=dz/dd*13;a.dartTimer=0.5;}
+        const tgt=nearestEnemyFiltered(gs,a.x,a.z,14,['silverCube']);
+        if(tgt){a.phase='dart';a.dartTarget=tgt;
+          const dx=tgt.x-a.x,dz=tgt.z-a.z,dd=d2(tgt.x,tgt.z,a.x,a.z)||1;
+          a.dartVx=dx/dd*13;a.dartVz=dz/dd*13;a.dartTimer=0.45;}
       }
-      for(let i=DROPS.length-1;i>=0;i--){const d=DROPS[i];if(d2(d.m.position.x,d.m.position.z,a.x,a.z)<1.8){gs.emeralds+=d.val;scene.remove(d.m);DROPS.splice(i,1);}}
+      for(let i=DROPS.length-1;i>=0;i--){
+        const dr=DROPS[i];
+        if(d2(dr.m.position.x,dr.m.position.z,a.x,a.z)<1.8){gs.emeralds+=dr.val;scene.remove(dr.m);DROPS.splice(i,1);}
+      }
     } else if(a.phase==='dart'){
       a.x+=a.dartVx*dt;a.z+=a.dartVz*dt;a.dartTimer-=dt;
-      if(a.dartTarget&&!a.dartTarget.dead&&d2(a.x,a.z,a.dartTarget.x,a.dartTarget.z)<1){hurtEnemy(gs,a.dartTarget,2);a.attackCooldown=1.5;a.phase='return';a.dartTarget=null;}
+      if(a.dartTarget&&!a.dartTarget.dead&&d2(a.x,a.z,a.dartTarget.x,a.dartTarget.z)<1){
+        hurtEnemy(gs,a.dartTarget,2);a.attackCooldown=1.4;a.phase='return';a.dartTarget=null;
+      }
       if(a.dartTimer<=0){a.phase='return';a.dartTarget=null;}
     } else {
       const tx=p.x+Math.cos(a.orbitAng)*a.orbitR,tz=p.z+Math.sin(a.orbitAng)*a.orbitR;
       const dx=tx-a.x,dz=tz-a.z,dd=d2(tx,tz,a.x,a.z)||1;
       if(dd<0.5)a.phase='orbit';else{a.x+=dx/dd*11*dt;a.z+=dz/dd*11*dt;}
     }
-    // repel/damage vexes
-    gs.enemies.forEach(e=>{if(!e.dead&&e.type==='vex'&&d2(a.x,a.z,e.x,e.z)<1.5)hurtEnemy(gs,e,3);});
-    a.grp.position.set(a.x,Math.sin(Date.now()/400+a.orbitAng)*0.18,a.z);fc(a.grp,a.x,a.z);
-  });
+    gs.enemies.forEach(e=>{if(!e.dead&&e.type==='vex'&&d2(a.x,a.z,e.x,e.z)<1.4)hurtEnemy(gs,e,3);});
+    a.grp.position.set(a.x,Math.sin(Date.now()/400+a.orbitAng)*0.16,a.z);fc(a.grp,a.x,a.z);
+  }
 }
 
-// GOLEM
+// ── GOLEM ─────────────────────────────────────────────────────────────────────
 function tickGolem(dt,gs){
   const g=gs.golem;if(!g||g.dead)return;g.attackCooldown-=dt;
   let best=null,bd=Infinity;
-  gs.enemies.forEach(e=>{if(e.dead)return;const dd=d2(e.x,e.z,g.x,g.z);if(!best||(e.type==='evoker'&&best.type!=='evoker')||dd<bd){best=e;bd=dd;}});
+  gs.enemies.forEach(e=>{if(e.dead)return;const dd=d2(e.x,e.z,g.x,g.z);
+    if(!best||(e.type==='evoker'&&best.type!=='evoker')||dd<bd){best=e;bd=dd;}});
   if(best){
     const dx=best.x-g.x,dz=best.z-g.z,dd=d2(best.x,best.z,g.x,g.z)||1;
     if(dd>g.r+best.r+0.3){g.x+=dx/dd*g.spd*dt;g.z+=dz/dd*g.spd*dt;}
     else if(g.attackCooldown<=0){
-      g.attackCooldown=1.4;gs.enemies.forEach(e=>{if(!e.dead&&d2(e.x,e.z,g.x,g.z)<5)hurtEnemy(gs,e,15);});
-      spawnParts(new THREE.Vector3(g.x,1,g.z),0xaaaaaa,10);
+      g.attackCooldown=1.4;
+      gs.enemies.forEach(e=>{if(!e.dead&&d2(e.x,e.z,g.x,g.z)<4.5)hurtEnemy(gs,e,14);});
+      spawnParts(new THREE.Vector3(g.x,1,g.z),0xaaaaaa,8);
     }
-  } else {const dx=-g.x,dz=-g.z,dd=d2(0,0,g.x,g.z)||1;if(dd>6){g.x+=dx/dd*g.spd*0.4*dt;g.z+=dz/dd*g.spd*0.4*dt;}}
+  } else {const dx=-g.x,dz=-g.z,dd=d2(0,0,g.x,g.z)||1;if(dd>7){g.x+=dx/dd*g.spd*0.4*dt;g.z+=dz/dd*g.spd*0.4*dt;}}
   gs.enemies.forEach(e=>{
-    if(!e.dead&&(e.type==='vindicator'||e.type==='ravager')&&d2(e.x,e.z,g.x,g.z)<g.r+e.r+0.3&&e.attackCooldown<=0){
-      g.hp-=(e.type==='ravager'?18:6);e.attackCooldown=1.2;
+    if(!e.dead&&(e.type==='vindicator'||e.type==='ravager')&&
+       d2(e.x,e.z,g.x,g.z)<g.r+e.r+0.3&&e.attackCooldown<=0){
+      g.hp-=(e.type==='ravager'?16:5);e.attackCooldown=1.2;
     }
   });
-  if(g.hp<=0&&!g.dead){g.dead=true;scene.remove(g.grp);addKill('🤖 Iron Golem has fallen!');}
+  if(g.hp<=0&&!g.dead){g.dead=true;scene.remove(g.grp);addKill('🤖 Iron Golem fell!');}
   if(!g.dead){g.grp.position.set(g.x,0,g.z);setBar(g.grp._bar,g.hp);fc(g.grp,g.x,g.z);}
 }
 
-// KING VILLAGER
+// ── KING VILLAGER ─────────────────────────────────────────────────────────────
 function tickKing(dt,gs){
   const k=gs.kingVillager;if(!k||k.dead)return;k.summonCooldown-=dt;
   const thr=nearestEnemy(gs,k.x,k.z,14);
-  if(thr){const dx=k.x-thr.x,dz=k.z-thr.z,dd=d2(k.x,k.z,thr.x,thr.z)||1;k.x+=dx/dd*2.2*dt;k.z+=dz/dd*2.2*dt;}
-  k.x=clamp(k.x,-17,17);k.z=clamp(k.z,-17,17);
+  if(thr){const dx=k.x-thr.x,dz=k.z-thr.z,dd=d2(k.x,k.z,thr.x,thr.z)||1;k.x+=dx/dd*2*dt;k.z+=dz/dd*2*dt;}
+  k.x=clamp(k.x,-18,18);k.z=clamp(k.z,-18,18);
   if(k.summonCooldown<=0){
-    k.summonCooldown=14;const p=edgePos();spawnEnemy(gs,'evoker',p.x,p.z);
-    addKill('👑 King Villager summons an Evoker!');spawnParts(new THREE.Vector3(k.x,1.5,k.z),0xffd700,12);
+    k.summonCooldown=16;const p=edgePos();spawnEnemy(gs,'evoker',p.x,p.z);
+    addKill('👑 King Villager summons an Evoker!');spawnParts(new THREE.Vector3(k.x,1.5,k.z),0xffd700,10);
   }
-  gs.enemies.forEach(e=>{if(!e.dead&&d2(e.x,e.z,k.x,k.z)<1.2)k.hp-=5*dt;});
-  if(k.hp<=0&&!k.dead){k.dead=true;k.grp.visible=false;document.getElementById('king-lbl').style.display='none';
-    addKill('👑 King Villager the I has been slain!');spawnParts(new THREE.Vector3(k.x,1,k.z),0xffd700,22);}
+  gs.enemies.forEach(e=>{if(!e.dead&&d2(e.x,e.z,k.x,k.z)<1.1)k.hp-=4*dt;});
+  if(k.hp<=0&&!k.dead){k.dead=true;k.grp.visible=false;
+    document.getElementById('king-lbl').style.display='none';
+    addKill('👑 King Villager I has been slain!');spawnParts(new THREE.Vector3(k.x,1,k.z),0xffd700,18);}
   if(!k.dead){k.grp.position.set(k.x,0,k.z);setBar(k.grp._bar,k.hp);fc(k.grp,k.x,k.z);}
   document.getElementById('king-hp').textContent=Math.max(0,Math.round(k.hp));
 }
 
-// EVOKER VILLAGER (FRIENDLY) — summons Wisps that fight for you
+// ── EVOKER VILLAGER (friendly) ────────────────────────────────────────────────
 function tickEvokerVillagerFriendly(dt,gs){
   const ev=gs.evokerVillager;if(!ev||ev.dead)return;
   ev.wispCooldown-=dt;ev.wanderT-=dt;
-  // flee threats
   const thr=nearestEnemy(gs,ev.x,ev.z,12);
   if(thr){const dx=ev.x-thr.x,dz=ev.z-thr.z,dd=d2(ev.x,ev.z,thr.x,thr.z)||1;ev.x+=dx/dd*2.5*dt;ev.z+=dz/dd*2.5*dt;}
-  else{if(ev.wanderT<=0){ev.wander=Math.random()*Math.PI*2;ev.wanderT=2+Math.random()*2;}ev.x+=Math.cos(ev.wander)*0.7*dt;ev.z+=Math.sin(ev.wander)*0.7*dt;}
-  ev.x=clamp(ev.x,-16,16);ev.z=clamp(ev.z,-16,16);
-  // summon friendly wisps periodically
+  else{if(ev.wanderT<=0){ev.wander=Math.random()*Math.PI*2;ev.wanderT=2+Math.random()*2;}
+    ev.x+=Math.cos(ev.wander)*0.7*dt;ev.z+=Math.sin(ev.wander)*0.7*dt;}
+  ev.x=clamp(ev.x,-17,17);ev.z=clamp(ev.z,-17,17);
   if(ev.wispCooldown<=0&&gs.enemies.filter(e=>!e.dead).length>0){
-    ev.wispCooldown=12+Math.random()*4;
-    for(let w=0;w<2;w++){
-      const a=Math.random()*Math.PI*2;
-      spawnFriendlyWisp(gs,ev.x+Math.cos(a)*2,ev.z+Math.sin(a)*2);
-    }
+    ev.wispCooldown=14+Math.random()*4;
+    for(let w=0;w<2;w++){const a=Math.random()*Math.PI*2;spawnFriendlyWisp(gs,ev.x+Math.cos(a)*2,ev.z+Math.sin(a)*2);}
     addKill('👤 Evoker Villager summons ally Wisps!');
-    spawnParts(new THREE.Vector3(ev.x,1.5,ev.z),0x88ffff,10);
+    spawnParts(new THREE.Vector3(ev.x,1.5,ev.z),0x88ffff,8);
   }
-  // take damage from enemies
-  gs.enemies.forEach(e=>{if(!e.dead&&d2(e.x,e.z,ev.x,ev.z)<1.1)ev.hp-=5*dt;});
-  if(ev.hp<=0&&!ev.dead){ev.dead=true;ev.grp.visible=false;addKill('👤 Evoker Villager has fallen!');spawnParts(new THREE.Vector3(ev.x,1,ev.z),0x88ffff,12);}
+  gs.enemies.forEach(e=>{if(!e.dead&&d2(e.x,e.z,ev.x,ev.z)<1.0)ev.hp-=4*dt;});
+  if(ev.hp<=0&&!ev.dead){ev.dead=true;ev.grp.visible=false;addKill('👤 Evoker Villager fell!');}
   if(!ev.dead){ev.grp.position.set(ev.x,0,ev.z);setBar(ev.grp._bar,ev.hp);fc(ev.grp,ev.x,ev.z);}
 }
 
-// VILLAGERS
+// ── BLUE VILLAGER ─────────────────────────────────────────────────────────────
+function tickBlueVillager(dt,gs){
+  const bv=gs.blueVillager;if(!bv||bv.dead)return;
+  bv.bobT=(bv.bobT||0)+dt*1.5;
+  bv.grp.position.y=Math.sin(bv.bobT)*0.08;
+  fc(bv.grp,bv.x,bv.z);
+  // show shop prompt when nearby
+  const near=d2(gs.player.x,gs.player.z,bv.x,bv.z)<5;
+  document.getElementById('hint').textContent=near?'E = OPEN SHOP (Blue Villager)':'WASD=MOVE · MOUSE=LOOK · CLICK/SPACE=ATTACK · Q=USE ITEM · E=SHOP';
+}
+
+// ── VILLAGERS ─────────────────────────────────────────────────────────────────
 function tickVillagers(dt,gs){
   gs.villagers.forEach(v=>{
     if(v.dead)return;v.wanderT-=dt;if(v.wanderT<=0){v.wander=Math.random()*Math.PI*2;v.wanderT=2+Math.random()*2;}
     const thr=nearestEnemy(gs,v.x,v.z,9);
     if(thr){const dx=v.x-thr.x,dz=v.z-thr.z,dd=d2(v.x,v.z,thr.x,thr.z)||1;v.x+=dx/dd*3.5*dt;v.z+=dz/dd*3.5*dt;}
     else{v.x+=Math.cos(v.wander)*0.9*dt;v.z+=Math.sin(v.wander)*0.9*dt;}
-    v.x=clamp(v.x,-17,17);v.z=clamp(v.z,-17,17);
+    v.x=clamp(v.x,-18,18);v.z=clamp(v.z,-18,18);
     v.grp.position.set(v.x,0,v.z);fc(v.grp,v.x,v.z);
-    gs.enemies.forEach(e=>{if(!e.dead&&d2(e.x,e.z,v.x,v.z)<1.2)v.hp-=4*dt;});
-    if(v.hp<=0&&!v.dead){v.dead=true;v.grp.visible=false;spawnParts(new THREE.Vector3(v.x,1,v.z),0xd09050,8);addKill('🏠 A Villager was slain!');}
+    gs.enemies.forEach(e=>{if(!e.dead&&d2(e.x,e.z,v.x,v.z)<1.1)v.hp-=4*dt;});
+    if(v.hp<=0&&!v.dead){v.dead=true;v.grp.visible=false;
+      spawnParts(new THREE.Vector3(v.x,1,v.z),0xd09050,7);addKill('🏠 A Villager was slain!');}
     setBar(v.grp._bar,v.hp);
   });
 }
 
-// BABY VILLAGERS
+// ── BABY VILLAGERS ────────────────────────────────────────────────────────────
 function tickBabies(dt,gs){
   gs.babyVillagers.forEach(b=>{
     if(b.dead)return;b.bobT+=dt*3.5;b.wanderT-=dt;b.panicTimer=Math.max(0,b.panicTimer-dt);
     const thr=nearestEnemy(gs,b.x,b.z,11);
-    if(thr){
-      if(b.panicTimer<=0){b.panicTimer=0.6+Math.random()*0.5;b.panicDir=Math.atan2(b.z-thr.z,b.x-thr.x)+(Math.random()-0.5)*1.4;}
-      b.x+=Math.cos(b.panicDir)*5.5*dt;b.z+=Math.sin(b.panicDir)*5.5*dt;
-    } else {
-      if(b.wanderT<=0){b.wander=Math.random()*Math.PI*2;b.wanderT=0.6+Math.random()*1;}
-      b.x+=Math.cos(b.wander)*1.6*dt;b.z+=Math.sin(b.wander)*1.6*dt;
-    }
-    b.x=clamp(b.x,-16,16);b.z=clamp(b.z,-16,16);
-    b.grp.position.set(b.x,Math.abs(Math.sin(b.bobT))*0.12,b.z);fc(b.grp,b.x,b.z);
-    gs.enemies.forEach(e=>{if(!e.dead&&d2(e.x,e.z,b.x,b.z)<1.0)b.hp-=5*dt;});
-    if(b.hp<=0&&!b.dead){b.dead=true;b.grp.visible=false;spawnParts(new THREE.Vector3(b.x,0.8,b.z),0xffcc88,10);addKill('🍼 A Baby Villager was slain!');}
+    if(thr){if(b.panicTimer<=0){b.panicTimer=0.6+Math.random()*0.5;
+      b.panicDir=Math.atan2(b.z-thr.z,b.x-thr.x)+(Math.random()-0.5)*1.4;}
+      b.x+=Math.cos(b.panicDir)*5.5*dt;b.z+=Math.sin(b.panicDir)*5.5*dt;}
+    else{if(b.wanderT<=0){b.wander=Math.random()*Math.PI*2;b.wanderT=0.6+Math.random()*1;}
+      b.x+=Math.cos(b.wander)*1.6*dt;b.z+=Math.sin(b.wander)*1.6*dt;}
+    b.x=clamp(b.x,-17,17);b.z=clamp(b.z,-17,17);
+    b.grp.position.set(b.x,Math.abs(Math.sin(b.bobT))*0.11,b.z);fc(b.grp,b.x,b.z);
+    gs.enemies.forEach(e=>{if(!e.dead&&d2(e.x,e.z,b.x,b.z)<0.9)b.hp-=5*dt;});
+    if(b.hp<=0&&!b.dead){b.dead=true;b.grp.visible=false;
+      spawnParts(new THREE.Vector3(b.x,0.8,b.z),0xffcc88,8);addKill('🍼 A Baby Villager was slain!');}
     setBar(b.grp._bar,b.hp);
   });
 }
 
-// ENEMIES
+// ── ENEMIES ───────────────────────────────────────────────────────────────────
 function tickEnemies(dt,gs){
   const p=gs.player;
   gs.enemies.forEach(e=>{
     if(e.dead)return;e.attackCooldown-=dt;
     const pInvis=p.invis&&d2(p.x,p.z,e.x,e.z)>4;
-    let tx=null,tz=null,isPlayer=false;
-    if(!pInvis){tx=p.x;tz=p.z;isPlayer=true;}
-    else {
+    let tx=null,tz=null,isP=false;
+    if(!pInvis){tx=p.x;tz=p.z;isP=true;}
+    else{
       let bd=Infinity;
-      [...gs.villagers,...gs.babyVillagers].filter(v=>!v.dead).forEach(v=>{const dd=d2(v.x,v.z,e.x,e.z);if(dd<bd){bd=dd;tx=v.x;tz=v.z;}});
+      [...gs.villagers,...gs.babyVillagers].filter(v=>!v.dead).forEach(v=>{
+        const dd=d2(v.x,v.z,e.x,e.z);if(dd<bd){bd=dd;tx=v.x;tz=v.z;}
+      });
       if(tx===null&&gs.golem&&!gs.golem.dead){tx=gs.golem.x;tz=gs.golem.z;}
       if(tx===null&&gs.kingVillager&&!gs.kingVillager.dead){tx=gs.kingVillager.x;tz=gs.kingVillager.z;}
     }
@@ -681,134 +1103,127 @@ function tickEnemies(dt,gs){
     if(e.type==='pillager'){
       if(dd>e.range*0.5){e.x+=dx/dd*e.spd*dt;e.z+=dz/dd*e.spd*dt;}
       else if(dd<e.range*0.3){e.x-=dx/dd*e.spd*0.5*dt;e.z-=dz/dd*e.spd*0.5*dt;}
-      if(dd<e.range&&e.attackCooldown<=0){e.attackCooldown=2;spawnProj(new THREE.Vector3(e.x,1.2,e.z),new THREE.Vector3(dx/dd,0.04,dz/dd),e.dmg);}
+      if(dd<e.range&&e.attackCooldown<=0){e.attackCooldown=2.0;
+        spawnProj(new THREE.Vector3(e.x,1.2,e.z),new THREE.Vector3(dx/dd,0.04,dz/dd),e.dmg);}
     }
     else if(e.type==='vindicator'||e.type==='ravager'){
       e.x+=dx/dd*e.spd*dt;e.z+=dz/dd*e.spd*dt;
       if(dd<e.r+1.0&&e.attackCooldown<=0){
         e.attackCooldown=(e.type==='ravager'?1.5:0.9);
-        if(isPlayer){p.hp-=e.dmg;flashDmg();spawnParts(new THREE.Vector3(p.x,1,p.z),0xff2222,4);}
-        else{[...gs.villagers,...gs.babyVillagers].forEach(v=>{if(!v.dead&&d2(v.x,v.z,e.x,e.z)<1.8)v.hp-=e.dmg;});
-          if(gs.golem&&!gs.golem.dead&&d2(gs.golem.x,gs.golem.z,e.x,e.z)<gs.golem.r+e.r+0.5)gs.golem.hp-=e.dmg;}
+        if(isP){
+          let dmg=e.dmg;if(p.shieldHits>0){p.shieldHits--;addKill('🛡️ Shield blocked a hit!');dmg=0;}
+          p.hp-=dmg;if(dmg>0)flashDmg();
+        } else {
+          [...gs.villagers,...gs.babyVillagers].forEach(v=>{if(!v.dead&&d2(v.x,v.z,e.x,e.z)<1.8)v.hp-=e.dmg;});
+          if(gs.golem&&!gs.golem.dead&&d2(gs.golem.x,gs.golem.z,e.x,e.z)<gs.golem.r+e.r+0.4)gs.golem.hp-=e.dmg;
+        }
       }
     }
     else if(e.type==='evoker'){
       if(dd<10){e.x-=dx/dd*e.spd*dt;e.z-=dz/dd*e.spd*dt;}
-      else if(dd>16){e.x+=dx/dd*e.spd*0.5*dt;e.z+=dz/dd*e.spd*0.5*dt;}
+      else if(dd>15){e.x+=dx/dd*e.spd*0.5*dt;e.z+=dz/dd*e.spd*0.5*dt;}
       e.spellCooldown-=dt;
-      if(e.spellCooldown<=0){
-        e.spellCooldown=4+Math.random()*2;
+      if(e.spellCooldown<=0){e.spellCooldown=4+Math.random()*2;
         spawnFangs(new THREE.Vector3(e.x,0,e.z),new THREE.Vector3(tx,0,tz));
-        // summon 3 vexes
-        for(let v=0;v<3;v++){const a=Math.random()*Math.PI*2;spawnEnemy(gs,'vex',e.x+Math.cos(a)*2,e.z+Math.sin(a)*2);}
-        spawnParts(new THREE.Vector3(e.x,1.5,e.z),0xff40ff,8);
+        // stagger vex spawns to avoid mini-freeze
+        for(let v=0;v<3;v++) setTimeout(()=>{
+          if(!GS||e.dead)return;
+          const a=Math.random()*Math.PI*2;spawnEnemy(GS,'vex',e.x+Math.cos(a)*2,e.z+Math.sin(a)*2);
+        },v*200);
+        spawnParts(new THREE.Vector3(e.x,1.5,e.z),0xff40ff,7);
       }
     }
     else if(e.type==='vex'){
       e.x+=dx/dd*e.spd*dt;e.z+=dz/dd*e.spd*dt;
-      e.grp.position.y=0.6+Math.sin(Date.now()/300+e.x)*0.3;
-      if(dd<1.0&&e.attackCooldown<=0){
-        e.attackCooldown=1.0;
-        if(isPlayer){p.hp-=e.dmg;flashDmg();}
-        else{[...gs.villagers,...gs.babyVillagers].forEach(v=>{if(!v.dead&&d2(v.x,v.z,e.x,e.z)<1.2)v.hp-=e.dmg;});}
+      e.grp.position.y=0.6+Math.sin(Date.now()/300+e.x)*0.28;
+      if(dd<1.0&&e.attackCooldown<=0){e.attackCooldown=1.0;
+        if(isP){let dmg=e.dmg;if(p.shieldHits>0){p.shieldHits--;dmg=0;}p.hp-=dmg;if(dmg>0)flashDmg();}
+        else{[...gs.villagers,...gs.babyVillagers].forEach(v=>{if(!v.dead&&d2(v.x,v.z,e.x,e.z)<1.1)v.hp-=e.dmg;});}
       }
     }
     else if(e.type==='silverCube'){
-      // drifts slowly, absorbs vexes
-      e.x+=Math.cos(Date.now()/2000+e.x)*0.5*dt;e.z+=Math.sin(Date.now()/1700+e.z)*0.5*dt;
+      e.x+=Math.cos(Date.now()/2200+e.x)*0.5*dt;e.z+=Math.sin(Date.now()/1800+e.z)*0.5*dt;
       for(let i=gs.enemies.length-1;i>=0;i--){
         const v2=gs.enemies[i];
-        if(!v2.dead&&v2.type==='vex'&&d2(v2.x,v2.z,e.x,e.z)<1.8){
+        if(!v2.dead&&v2.type==='vex'&&d2(v2.x,v2.z,e.x,e.z)<1.7){
           v2.dead=true;scene.remove(v2.grp);e.absorbedVexes++;
-          spawnParts(new THREE.Vector3(e.x,1,e.z),0x8888ff,5);
-          addKill(`🧊 Sulver Cube absorbed a Vex (${e.absorbedVexes}/5)`);
+          spawnParts(new THREE.Vector3(e.x,1,e.z),0x8888ff,4);
+          addKill(`🧊 Sulver Cube absorbed Vex (${e.absorbedVexes}/5)`);
         }
       }
       if(e.absorbedVexes>=5){
-        spawnParts(new THREE.Vector3(e.x,1.5,e.z),0xffffff,30);
-        gs.enemies.forEach(en=>{if(!en.dead&&d2(en.x,en.z,e.x,e.z)<7)hurtEnemy(gs,en,30);});
-        for(let w=0;w<3;w++){const a=Math.random()*Math.PI*2;spawnEnemy(gs,'wisp',e.x+Math.cos(a)*2,e.z+Math.sin(a)*2);}
-        addKill('🧊 Sulver Cube EXPLODED — Wisps spawned!');
-        e.dead=true;scene.remove(e.grp);return;
+        spawnParts(new THREE.Vector3(e.x,1.5,e.z),0xffffff,25);
+        gs.enemies.forEach(en=>{if(!en.dead&&d2(en.x,en.z,e.x,e.z)<7)hurtEnemy(gs,en,28);});
+        for(let w=0;w<3;w++){const a=Math.random()*Math.PI*2;spawnFriendlyWisp(gs,e.x+Math.cos(a)*2,e.z+Math.sin(a)*2);}
+        addKill('🧊 Sulver Cube EXPLODED → ally Wisps!');e.dead=true;scene.remove(e.grp);return;
       }
       e.grp.position.set(e.x,0,e.z);setBar(e.grp._bar,e.hp);return;
     }
     else if(e.type==='wisp'){
       e.x+=dx/dd*e.spd*dt;e.z+=dz/dd*e.spd*dt;
-      e.grp.position.y=0.8+Math.sin(Date.now()/250+e.z)*0.4;
-      // kill vexes instantly on contact
-      gs.enemies.forEach(v2=>{if(!v2.dead&&v2.type==='vex'&&d2(v2.x,v2.z,e.x,e.z)<1.2){
-        v2.dead=true;scene.remove(v2.grp);spawnParts(new THREE.Vector3(v2.x,0.8,v2.z),0xaaaaff,6);}});
-      if(dd<1.0&&e.attackCooldown<=0){
-        e.attackCooldown=0.6;
-        if(isPlayer){p.hp-=e.dmg;flashDmg();}
-        else{[...gs.villagers,...gs.babyVillagers].forEach(v=>{if(!v.dead&&d2(v.x,v.z,e.x,e.z)<1.0)v.hp-=e.dmg;});}
+      e.grp.position.y=0.8+Math.sin(Date.now()/250+e.z)*0.38;
+      gs.enemies.forEach(v2=>{if(!v2.dead&&v2.type==='vex'&&d2(v2.x,v2.z,e.x,e.z)<1.1){
+        v2.dead=true;scene.remove(v2.grp);spawnParts(new THREE.Vector3(v2.x,0.8,v2.z),0xaaaaff,5);}});
+      if(dd<1.0&&e.attackCooldown<=0){e.attackCooldown=0.6;
+        if(isP){let dmg=e.dmg;if(p.shieldHits>0){p.shieldHits--;dmg=0;}p.hp-=dmg;if(dmg>0)flashDmg();}
+        else{[...gs.villagers,...gs.babyVillagers].forEach(v=>{if(!v.dead&&d2(v.x,v.z,e.x,e.z)<0.9)v.hp-=e.dmg;});}
       }
     }
     else if(e.type==='illusioner'){
       if(dd>e.range*0.5){e.x+=dx/dd*e.spd*dt;e.z+=dz/dd*e.spd*dt;}
       else if(dd<e.range*0.3){e.x-=dx/dd*e.spd*0.5*dt;e.z-=dz/dd*e.spd*0.5*dt;}
       if(dd<e.range&&e.attackCooldown<=0){
-        // fires 3 arrows in rapid burst (3x faster than skeleton)
         e.attackCooldown=3;
-        for(let shot=0;shot<3;shot++){
-          setTimeout(()=>{
-            if(e.dead||!GS||GS.phase==='gameover')return;
-            const sp=(Math.random()-0.5)*0.12,sp2=(Math.random()-0.5)*0.12;
-            spawnProj(new THREE.Vector3(e.x,1.2,e.z),new THREE.Vector3(dx/dd+sp,0.04,dz/dd+sp2),e.dmg,0x6688ff);
-          },shot*330);
-        }
+        for(let shot=0;shot<3;shot++) setTimeout(()=>{
+          if(!GS||e.dead)return;
+          const sp=(Math.random()-0.5)*0.1,sp2=(Math.random()-0.5)*0.1;
+          spawnProj(new THREE.Vector3(e.x,1.2,e.z),new THREE.Vector3(dx/dd+sp,0.04,dz/dd+sp2),e.dmg,0x6688ff);
+        },shot*330);
       }
-      // blindness
       e.blindCooldown-=dt;
-      if(e.blindCooldown<=0&&isPlayer){
+      if(e.blindCooldown<=0&&isP){
         e.blindCooldown=35+Math.random()*10;p.blind=true;p.blindTimer=60;
         document.getElementById('blind-overlay').style.display='block';
-        document.getElementById('blind-overlay').style.background='rgba(0,0,0,0.90)';
+        document.getElementById('blind-overlay').style.background='rgba(0,0,0,0.88)';
         document.getElementById('blind-txt').style.display='block';
-        addKill('👁️ BLINDED for 60 seconds by Illusioner!');
+        addKill('👁️ BLINDED for 60s by Illusioner!');
       }
     }
     else if(e.type==='archIllager'){
       if(dd>e.r+2){e.x+=dx/dd*e.spd*dt;e.z+=dz/dd*e.spd*dt;}
-      if(dd<e.r+1.8&&e.attackCooldown<=0){
-        e.attackCooldown=1.0;
-        if(isPlayer){p.hp-=e.dmg;flashDmg();}
-        [...gs.villagers,...gs.babyVillagers].forEach(v=>{if(!v.dead&&d2(v.x,v.z,e.x,e.z)<2.5)v.hp-=e.dmg;});
+      if(dd<e.r+1.8&&e.attackCooldown<=0){e.attackCooldown=1.0;
+        if(isP){let dmg=e.dmg;if(p.shieldHits>0){p.shieldHits--;dmg=0;}p.hp-=dmg;if(dmg>0)flashDmg();}
+        [...gs.villagers,...gs.babyVillagers].forEach(v=>{if(!v.dead&&d2(v.x,v.z,e.x,e.z)<2.4)v.hp-=e.dmg;});
       }
       e.summonCooldown-=dt;
-      if(e.summonCooldown<=0){
-        e.summonCooldown=8+Math.random()*4;
-        [{t:'pillager'},{t:'pillager'},{t:'vindicator'},{t:'evoker'}].forEach(({t})=>{
-          const a=Math.random()*Math.PI*2;spawnEnemy(gs,t,e.x+Math.cos(a)*5,e.z+Math.sin(a)*5);
-        });
+      if(e.summonCooldown<=0){e.summonCooldown=9+Math.random()*4;
+        // stagger summons
+        [{t:'pillager'},{t:'vindicator'},{t:'evoker'}].forEach(({t},idx)=>setTimeout(()=>{
+          if(!GS||e.dead)return;const a=Math.random()*Math.PI*2;spawnEnemy(GS,t,e.x+Math.cos(a)*5,e.z+Math.sin(a)*5);
+        },idx*300));
         spawnFangs(new THREE.Vector3(e.x,0,e.z),new THREE.Vector3(tx,0,tz),0xff8800);
-        spawnParts(new THREE.Vector3(e.x,2.2,e.z),0xff8800,18);
-        addKill('👑 Arch-Illager calls reinforcements!');
-      }
+        spawnParts(new THREE.Vector3(e.x,2.2,e.z),0xff8800,14);addKill('👑 Arch-Illager summons!');}
       e.grp.position.y=Math.sin(Date.now()/500)*0.12;
     }
 
-    // move & update (shared)
-    if(e.type!=='silverCube'&&e.type!=='vex'&&e.type!=='wisp'&&e.type!=='archIllager'){
-      e.x=clamp(e.x,-26,26);e.z=clamp(e.z,-26,26);
-      e.grp.position.set(e.x,e.grp.position.y||0,e.z);
-    } else if(e.type!=='silverCube'){
-      e.x=clamp(e.x,-26,26);e.z=clamp(e.z,-26,26);
-      e.grp.position.x=e.x;e.grp.position.z=e.z;
+    if(e.type!=='silverCube'){
+      e.x=clamp(e.x,-27,27);e.z=clamp(e.z,-27,27);
+      const ny=(e.type==='vex'||e.type==='wisp')?e.grp.position.y:0;
+      e.grp.position.set(e.x,ny,e.z);
+      setBar(e.grp._bar,e.hp);
     }
-    setBar(e.grp._bar,e.hp);
   });
   gs.enemies=gs.enemies.filter(e=>!e.dead);
 }
 
+// ── HURT / NEAREST ────────────────────────────────────────────────────────────
 function hurtEnemy(gs,e,dmg){
-  e.hp-=dmg;spawnParts(new THREE.Vector3(e.x,1.2,e.z),0xff4444,4);
+  e.hp-=dmg;spawnParts(new THREE.Vector3(e.x,1.2,e.z),0xff4444,3);
   if(e.hp<=0&&!e.dead){
     e.dead=true;
-    const drops={evoker:5,ravager:6,archIllager:50,illusioner:4,vindicator:3,evokerVillager:5,silverCube:3,wisp:2};
+    const drops={evoker:5,ravager:6,archIllager:50,illusioner:4,vindicator:3,silverCube:3,wisp:2,vex:1};
     spawnDrop(new THREE.Vector3(e.x,0,e.z),drops[e.type]||1);
-    if(e.type==='archIllager')addKill('💀 ARCH-ILLAGER HAS BEEN DEFEATED!!');
+    if(e.type==='archIllager')addKill('💀 ARCH-ILLAGER DEFEATED!');
     scene.remove(e.grp);
   }
 }
@@ -823,81 +1238,91 @@ function nearestEnemyFiltered(gs,x,z,maxR,exclude=[]){
   return best;
 }
 
-// HUD
+// ── HUD ───────────────────────────────────────────────────────────────────────
 function tickHUD(gs){
   const p=gs.player;
   const hrt=Math.max(0,Math.round(p.hp));
   document.getElementById('hearts').textContent='♥'.repeat(hrt)+'♡'.repeat(Math.max(0,p.maxHp-hrt));
   document.getElementById('em-lbl').textContent=gs.emeralds;
   document.getElementById('wave-lbl').textContent=`WAVE ${gs.wave} / 420`;
-  const pct=Math.round((gs.wave/420)*20);
-  document.getElementById('wave-prog').textContent='█'.repeat(pct)+'░'.repeat(20-pct);
-  // estimated time: ~60s per wave average
-  const minsLeft=Math.round((420-gs.wave)*1);
-  const hLeft=Math.floor(minsLeft/60),mLeft=minsLeft%60;
-  document.getElementById('wave-prog').title=hLeft>0?`~${hLeft}h${mLeft}m left`:`~${mLeft}m left`;
+  const prog=Math.round(gs.wave/420*16);
+  document.getElementById('wave-prog').textContent='█'.repeat(prog)+'░'.repeat(16-prog);
   const pl=document.getElementById('phase-lbl');
-  if(gs.phase==='prep'){pl.textContent=`PREP: ${Math.ceil(gs.prepTimer)}s`;pl.style.color='#7af';}
-  else{pl.textContent=`ENEMIES: ${gs.enemies.filter(e=>!e.dead).length}`;pl.style.color='#f77';}
+  if(gs.phase==='prep'){pl.textContent=`PREP ${Math.ceil(gs.prepTimer)}s`;pl.style.color='#7af';}
+  else{pl.textContent=`${gs.enemies.filter(e=>!e.dead).length+gs.spawnQueue.length} left`;pl.style.color='#f77';}
   const lv=gs.villagers.filter(v=>!v.dead).length,lb=gs.babyVillagers.filter(b=>!b.dead).length;
   document.getElementById('vil-lbl').textContent=Array(5).fill(0).map((_,i)=>i<lv?'●':'○').join('');
   document.getElementById('baby-lbl').textContent=Array(3).fill(0).map((_,i)=>i<lb?'◦':'·').join('');
-  document.getElementById('allay-lbl').textContent=`ALLAYS: ${gs.allays.filter(a=>!a.dead).length}`;
+  document.getElementById('allay-lbl').textContent=gs.allays.filter(a=>!a.dead).length;
   const gol=gs.golem;
-  document.getElementById('golem-lbl').textContent=gol&&!gol.dead?'GOLEM '+'●'.repeat(Math.ceil(gol.hp/20))+'○'.repeat(Math.max(0,5-Math.ceil(gol.hp/20))):'GOLEM ✝';
-  // mini enemy roster
-  const et=gs.enemies.filter(e=>!e.dead);const by={};et.forEach(e=>by[e.type]=(by[e.type]||0)+1);
-  document.getElementById('enemy-lbl').textContent=Object.entries(by).map(([t,n])=>`${n}×${t}`).join(' ').substring(0,55);
+  document.getElementById('golem-lbl').textContent=gol&&!gol.dead?'●'.repeat(Math.ceil(gol.hp/20))+'○'.repeat(Math.max(0,5-Math.ceil(gol.hp/20))):'✝';
   if(gs.kingVillager&&!gs.kingVillager.dead)document.getElementById('king-hp').textContent=Math.max(0,Math.round(gs.kingVillager.hp));
+  const et=gs.enemies.filter(e=>!e.dead);const by={};et.forEach(e=>by[e.type]=(by[e.type]||0)+1);
+  document.getElementById('enemy-lbl').textContent=Object.entries(by).map(([t,n])=>`${n}×${t}`).join(' ').substring(0,50);
 }
 
-// UI
+// ── UI ────────────────────────────────────────────────────────────────────────
 function flashDmg(){const el=document.getElementById('dmg-flash');el.style.background='rgba(255,0,0,0.38)';setTimeout(()=>el.style.background='rgba(255,0,0,0)',130);}
 function showBanner(gs){
-  const b=document.getElementById('wave-banner');
-  const w=gs.wave;
-  let msg=`WAVE ${w} / 420 INCOMING!`;
-  if(w===420) msg='⚠ WAVE 420 — THE FINAL STAND! ⚠';
-  else if(w%60===0) msg=`⚠ WAVE ${w} — ARCH-ILLAGER BOSS WAVE! ⚠`;
-  else if(w%20===0) msg=`WAVE ${w} — ENEMIES GROW STRONGER!`;
+  const b=document.getElementById('wave-banner'),w=gs.wave;
+  let msg=`WAVE ${w} INCOMING!`;
+  if(w===420)msg='⚠ WAVE 420 — THE FINAL STAND! ⚠';
+  else if(w%60===0)msg=`⚠ WAVE ${w} — ARCH-ILLAGER! ⚠`;
+  else if(w%20===0)msg=`WAVE ${w} — ENEMIES STRONGER!`;
   b.textContent=msg;b.style.display='block';setTimeout(()=>b.style.display='none',2800);
 }
 function showEnd(won,gs){
-  const ol=document.getElementById('overlay');ol.style.display='flex';
-  ol.innerHTML=`
-    <h1 style="color:${won?'#5aff5a':'#ff4444'}">${won?'🏆 RAID DEFEATED!':'💀 VILLAGE LOST'}</h1>
-    <p>
-      Wave reached: ${gs.wave} / 420<br>
-      Emeralds collected: ${gs.emeralds}<br>
-      Villagers: ${gs.villagers.filter(v=>!v.dead).length}/5 · Babies: ${gs.babyVillagers.filter(b=>!b.dead).length}/3<br>
-      ${gs.kingVillager?(gs.kingVillager.dead?'👑 King Villager fell.':'👑 King Villager survived!'):''}
-    </p>
-    <button onclick="startGame()">▶ PLAY AGAIN</button>
+  const go=document.getElementById('gameover-screen');go.style.display='flex';
+  document.getElementById('go-title').textContent=won?'🏆 EMERALD CITY SAVED!':'💀 EMERALD CITY FELL';
+  document.getElementById('go-title').style.color=won?'#5aff5a':'#ff4444';
+  document.getElementById('go-body').innerHTML=`
+    Wave reached: ${gs.wave} / 420<br>
+    Emeralds collected: ${gs.emeralds}<br>
+    Villagers: ${gs.villagers.filter(v=>!v.dead).length}/5 · Babies: ${gs.babyVillagers.filter(b=>!b.dead).length}/3<br>
+    ${gs.kingVillager?(gs.kingVillager.dead?'👑 King Villager fell.':'👑 King Villager survived!'):''}
   `;
   if(document.pointerLockElement)document.exitPointerLock();
 }
 
-// INPUT
-window.addEventListener('keydown',e=>{KEYS[e.key]=true;if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();});
+// ── INPUT ─────────────────────────────────────────────────────────────────────
+window.addEventListener('keydown',e=>{
+  KEYS[e.key]=true;
+  if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();
+});
 window.addEventListener('keyup',e=>{KEYS[e.key]=false;});
 document.getElementById('c').addEventListener('click',()=>{
-  if(!document.pointerLockElement)document.getElementById('c').requestPointerLock();else mouseAtk=true;
+  if(!document.pointerLockElement)document.getElementById('c').requestPointerLock();
+  else if(!shopOpen)mouseAtk=true;
 });
 document.addEventListener('mousemove',e=>{
-  if(document.pointerLockElement===document.getElementById('c')){yaw-=e.movementX*0.002;pitch=clamp(pitch-e.movementY*0.002,-0.5,0.45);}
+  if(document.pointerLockElement===document.getElementById('c')){
+    yaw-=e.movementX*0.002;pitch=clamp(pitch-e.movementY*0.002,-0.5,0.45);
+  }
 });
-document.addEventListener('pointerlockchange',()=>{document.getElementById('hint').style.opacity=document.pointerLockElement?'0':'1';});
+document.addEventListener('pointerlockchange',()=>{
+  document.getElementById('hint').style.opacity=document.pointerLockElement?'0.4':'1';
+});
 
-// LOOP
+// ── RENDER LOOP ───────────────────────────────────────────────────────────────
 function loop(now){
-  const dt=Math.min((now-GS.lastTime)/1000,0.05);GS.lastTime=now;
+  if(!GS){animId=requestAnimationFrame(loop);renderer.render(scene,camera);return;}
+  const dt=Math.min((now-GS.lastTime)/1000,0.05);
+  GS.lastTime=now;
   if(GS.phase!=='gameover'&&GS.phase!=='win')tick(dt);
-  renderer.render(scene,camera);animId=requestAnimationFrame(loop);
+  renderer.render(scene,camera);
+  animId=requestAnimationFrame(loop);
 }
 
-// START
+// ── START GAME ────────────────────────────────────────────────────────────────
 function startGame(){
-  document.getElementById('overlay').style.display='none';
+  // hide menu & panels
+  document.getElementById('menu').style.display='none';
+  document.getElementById('gameover-screen').style.display='none';
+  document.getElementById('hud').style.display='flex';
+  document.getElementById('inv-bar').style.display='flex';
+  document.getElementById('crosshair').style.display='block';
+
+  // clear old state
   if(GS){
     GS.enemies.forEach(e=>scene.remove(e.grp));
     GS.allays.forEach(a=>scene.remove(a.grp));
@@ -906,25 +1331,36 @@ function startGame(){
     if(GS.golem)scene.remove(GS.golem.grp);
     if(GS.kingVillager)scene.remove(GS.kingVillager.grp);
     if(GS.evokerVillager)scene.remove(GS.evokerVillager.grp);
-    DROPS.forEach(d=>scene.remove(d.m));DROPS.length=0;
-    PROJS.forEach(p=>scene.remove(p.m));PROJS.length=0;
-    FANGS.forEach(f=>scene.remove(f.m));FANGS.length=0;
-    PARTS.forEach(p=>scene.remove(p.m));PARTS.length=0;
-    KILLS.length=0;
+    if(GS.blueVillager)scene.remove(GS.blueVillager.grp);
   }
+  DROPS.forEach(d=>scene.remove(d.m));DROPS.length=0;
+  PROJS.forEach(p=>scene.remove(p.m));PROJS.length=0;
+  FANGS.forEach(f=>scene.remove(f.m));FANGS.length=0;
+  PARTS.forEach(p=>scene.remove(p.m));PARTS.length=0;
+  FW.forEach(w=>scene.remove(w.grp));FW.length=0;
+  KILLS.length=0;
+
+  // reset inventory
+  INVENTORY[1]=INVENTORY[2]=INVENTORY[3]=INVENTORY[4]=null;
+  selectedSlot=0;shopOpen=false;
+  renderInventory();
+
   yaw=0;pitch=0;
   document.getElementById('blind-overlay').style.background='rgba(0,0,0,0)';
   document.getElementById('blind-txt').style.display='none';
   document.getElementById('king-lbl').style.display='none';
-  GS=freshGS();buildMap();
-  spawnVillagers(GS);spawnBabyVillagers(GS);spawnAllays(GS);spawnGolem(GS);
-  spawnKingVillager(GS);spawnEvokerVillager(GS);
-  FRIENDLY_WISPS.forEach(w=>scene.remove(w.grp));FRIENDLY_WISPS.length=0;
+
+  GS=freshGS();
+  buildMap();
+  spawnVillagers(GS);spawnBabyVillagers(GS);spawnAllays(GS);
+  spawnGolem(GS);spawnKingVillager(GS);spawnEvokerVillager(GS);spawnBlueVillager(GS);
   GS.lastTime=performance.now();
-  if(animId)cancelAnimationFrame(animId);
-  loop(GS.lastTime);
   document.getElementById('c').requestPointerLock();
 }
+
+// start the render loop immediately (shows the map behind the menu)
+buildMap();
+animId=requestAnimationFrame(loop);
 </script>
 </body>
 </html>
